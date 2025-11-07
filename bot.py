@@ -59,41 +59,6 @@ async def on_ready():
     scheduler.start()
     
     logger.info(f"Bot is ready! Next report in: {scheduler.get_next_run_time()}")
-    
-    # Send welcome message to report channel
-    channel = bot.get_channel(REPORT_CHANNEL_ID)
-    if channel:
-        embed = discord.Embed(
-            title="🤖 Project Manager Bot Online",
-            description="Your automated project reporting assistant is now active!",
-            color=0x00FF00,
-            timestamp=datetime.utcnow()
-        )
-        
-        embed.add_field(
-            name="📊 Automated Reports",
-            value=f"Reports will be sent every 12 hours at **{', '.join([f'{h}:00' for h in REPORT_HOURS])} IST**",
-            inline=False
-        )
-        
-        embed.add_field(
-            name="⏰ Next Report",
-            value=f"In **{scheduler.get_next_run_time()}**",
-            inline=True
-        )
-        
-        embed.add_field(
-            name="📋 Commands",
-            value="Type `!help` to see all available commands",
-            inline=True
-        )
-        
-        embed.set_footer(text="Monitoring your projects 24/7")
-        
-        try:
-            await channel.send(embed=embed)
-        except Exception as e:
-            logger.error(f"Failed to send welcome message: {e}")
 
 
 @bot.event
