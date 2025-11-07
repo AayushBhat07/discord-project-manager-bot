@@ -336,8 +336,8 @@ async def ping(ctx):
 
 # Health check endpoint for keeping Render awake
 async def health_check(request):
-    """Simple health check endpoint"""
-    return web.Response(text="OK", status=200)
+    """Simple health check endpoint - returns minimal response"""
+    return web.Response(text="", status=200)
 
 
 async def start_health_server():
@@ -346,11 +346,11 @@ async def start_health_server():
     app.router.add_get('/health', health_check)
     app.router.add_get('/', health_check)
     
-    runner = web.AppRunner(app)
+    # Disable access logs to prevent output during health checks
+    runner = web.AppRunner(app, access_log=None)
     await runner.setup()
     site = web.TCPSite(runner, '0.0.0.0', 8080)
     await site.start()
-    logger.info("Health check server started on port 8080")
 
 
 def main():
