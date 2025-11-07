@@ -6,6 +6,7 @@ import asyncio
 import ssl
 from typing import Optional
 from datetime import datetime
+from aiohttp import web
 
 from config import (
     DISCORD_TOKEN, REPORT_CHANNEL_ID, COMMAND_PREFIX,
@@ -368,6 +369,25 @@ async def ping(ctx):
     await ctx.send(f"🏓 Pong! Latency: {latency}ms")
 
 
+# Health check endpoint for keeping Render awake
+async def health_check(request):
+    """Simple health check endpoint"""
+    return web.Response(text="Bot is alive!")
+
+
+async def start_health_server():
+    """Start a simple web server for health checks"""
+    app = web.Application()
+    app.router.add_get('/health', health_check)
+    app.router.add_get('/', health_check)
+    
+    runner = web.AppRunner(app)
+    await runner.setup()
+    site = web.TCPSite(runner, '0.0.0.0', 8080)
+    await site.start()
+    logger.info("Health check server started on port 8080")
+
+
 def main():
     """Main entry point"""
     if not DISCORD_TOKEN:
@@ -382,6 +402,13 @@ def main():
     
     try:
         logger.info("Starting Discord bot...")
+        
+        # Start health check server in background
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        loop.create_task(start_health_server())
+        
+        # Run bot
         bot.run(DISCORD_TOKEN)
     except KeyboardInterrupt:
         logger.info("Bot stopped by user")
