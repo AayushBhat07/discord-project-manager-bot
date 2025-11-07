@@ -55,11 +55,17 @@ async def on_ready():
     logger.info(f'Connected to {len(bot.guilds)} guilds')
     
     # Set bot presence/activity
-    activity = discord.Activity(
-        type=discord.ActivityType.watching,
-        name=f"{len(bot.guilds)} servers | !help for commands"
-    )
-    await bot.change_presence(activity=activity, status=discord.Status.online)
+    try:
+        await bot.change_presence(
+            activity=discord.Activity(
+                type=discord.ActivityType.watching,
+                name="your projects 24/7"
+            ),
+            status=discord.Status.online
+        )
+        logger.info("Bot presence set successfully")
+    except Exception as e:
+        logger.error(f"Failed to set presence: {e}")
     
     # Schedule automated reports
     scheduler.schedule_reports(send_scheduled_reports, REPORT_HOURS)
