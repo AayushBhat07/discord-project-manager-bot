@@ -54,6 +54,13 @@ async def on_ready():
     logger.info(f'Bot connected as {bot.user.name} (ID: {bot.user.id})')
     logger.info(f'Connected to {len(bot.guilds)} guilds')
     
+    # Set bot presence/activity
+    activity = discord.Activity(
+        type=discord.ActivityType.watching,
+        name=f"{len(bot.guilds)} servers | !help for commands"
+    )
+    await bot.change_presence(activity=activity, status=discord.Status.online)
+    
     # Schedule automated reports
     scheduler.schedule_reports(send_scheduled_reports, REPORT_HOURS)
     scheduler.start()
