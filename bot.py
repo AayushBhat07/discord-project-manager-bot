@@ -372,7 +372,7 @@ async def ping(ctx):
 # Health check endpoint for keeping Render awake
 async def health_check(request):
     """Simple health check endpoint"""
-    return web.Response(text="Bot is alive!")
+    return web.Response(text="OK", status=200)
 
 
 async def start_health_server():
