@@ -20,12 +20,12 @@ ADMIN_USER_IDS = [int(uid) for uid in os.getenv('ADMIN_USER_IDS', '').split(',')
 
 # API Endpoints
 ENDPOINTS = {
-    'projects': f'{API_BASE_URL}/discord/projects',
-    'recent_tasks': f'{API_BASE_URL}/discord/tasks/recent',
-    'stats': f'{API_BASE_URL}/discord/stats',
-    'incomplete': f'{API_BASE_URL}/discord/incomplete',
-    'commits': f'{API_BASE_URL}/discord/commits',
-    'link': f'{API_BASE_URL}/discord/link',
+    'projects': f'{API_BASE_URL}/api/discord/projects',
+    'recent_tasks': f'{API_BASE_URL}/api/discord/tasks/recent',
+    'stats': f'{API_BASE_URL}/api/discord/stats',
+    'incomplete': f'{API_BASE_URL}/api/discord/incomplete',
+    'commits': f'{API_BASE_URL}/api/discord/commits',
+    'link': f'{API_BASE_URL}/api/discord/link',
 }
 
 # Discord Embed Colors
