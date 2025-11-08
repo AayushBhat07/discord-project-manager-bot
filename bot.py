@@ -4,6 +4,7 @@ import logging
 import sys
 import asyncio
 import ssl
+import random
 from typing import Optional
 from datetime import datetime
 from aiohttp import web
@@ -48,24 +49,43 @@ report_builder = ReportBuilder()
 scheduler = ReportScheduler(TIMEZONE)
 
 
+# Cool rotating status messages
+STATUS_MESSAGES = [
+    (discord.ActivityType.watching, "👀 your team crush deadlines"),
+    (discord.ActivityType.watching, "📊 projects like a hawk"),
+    (discord.ActivityType.playing, "🎮 Project Manager 2024"),
+    (discord.ActivityType.listening, "🎧 your feature requests"),
+    (discord.ActivityType.competing, "🏆 for best bot award"),
+    (discord.ActivityType.watching, "⚡ commits fly by"),
+    (discord.ActivityType.watching, "🔥 productivity levels rise"),
+]
+
+
+async def rotate_status():
+    """Rotate bot status every 30 seconds"""
+    await bot.wait_until_ready()
+    while not bot.is_closed():
+        try:
+            activity_type, name = random.choice(STATUS_MESSAGES)
+            await bot.change_presence(
+                activity=discord.Activity(type=activity_type, name=name),
+                status=discord.Status.online
+            )
+            await asyncio.sleep(30)  # Change every 30 seconds
+        except Exception as e:
+            logger.error(f"Error rotating status: {e}")
+            await asyncio.sleep(30)
+
+
 @bot.event
 async def on_ready():
     """Event handler for when bot is ready"""
     logger.info(f'Bot connected as {bot.user.name} (ID: {bot.user.id})')
     logger.info(f'Connected to {len(bot.guilds)} guilds')
     
-    # Set bot presence/activity
-    try:
-        await bot.change_presence(
-            activity=discord.Activity(
-                type=discord.ActivityType.watching,
-                name="your projects 24/7"
-            ),
-            status=discord.Status.online
-        )
-        logger.info("Bot presence set successfully")
-    except Exception as e:
-        logger.error(f"Failed to set presence: {e}")
+    # Start rotating status
+    bot.loop.create_task(rotate_status())
+    logger.info("Status rotation started")
     
     # Schedule automated reports
     scheduler.schedule_reports(send_scheduled_reports, REPORT_HOURS)
