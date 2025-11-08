@@ -12,13 +12,13 @@ A production-ready Discord bot that monitors your project management web applica
 
 ## ✨ Features
 
-✅ **Automated 12-Hour Reports** - Sends comprehensive project status updates at 8 AM and 8 PM IST
-✅ **Task Tracking** - Monitor completed, pending, and overdue tasks
-✅ **Team Performance** - View user completion statistics
-✅ **GitHub Integration** - Track recent commits and code changes
-✅ **User Mentions** - Automatically @mentions users with pending tasks
-✅ **Manual Commands** - Get status updates on demand
-✅ **Account Linking** - Link Discord accounts to web app users
+✅ **Automated 12-Hour Reports** - Sends comprehensive project status updates at 8 AM and 8 PM IST \
+✅ **Task Tracking** - Monitor completed, pending, and overdue tasks \
+✅ **Team Performance** - View user completion statistics \
+✅ **GitHub Integration** - Track recent commits and code changes \
+✅ **User Mentions** - Automatically @mentions users with pending tasks \
+✅ **Manual Commands** - Get status updates on demand \
+✅ **Account Linking** - Link Discord accounts to web app users \
 
 ## Quick Start
 
