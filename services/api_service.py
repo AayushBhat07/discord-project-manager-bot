@@ -38,7 +38,7 @@ class APIService:
         try:
             logger.info("Fetching active projects from API")
             response = self.session.get(
-                f"{self.base_url}/api/discord/projects",
+                f"{self.base_url}/discord/projects",
                 timeout=self.timeout
             )
             response.raise_for_status()
@@ -65,7 +65,7 @@ class APIService:
         try:
             logger.info(f"Fetching tasks from last {hours} hours")
             response = self.session.post(
-                f"{self.base_url}/api/discord/tasks/recent",
+                f"{self.base_url}/discord/tasks/recent",
                 json={"hours": hours},
                 timeout=self.timeout
             )
@@ -82,7 +82,7 @@ class APIService:
         try:
             logger.info(f"Fetching user stats for project {project_id}")
             response = self.session.post(
-                f"{self.base_url}/api/discord/stats",
+                f"{self.base_url}/discord/stats",
                 json={"projectId": project_id, "hours": hours},
                 timeout=self.timeout
             )
@@ -99,7 +99,7 @@ class APIService:
         try:
             logger.info(f"Fetching incomplete tasks for project {project_id}")
             response = self.session.post(
-                f"{self.base_url}/api/discord/incomplete",
+                f"{self.base_url}/discord/incomplete",
                 json={"projectId": project_id},
                 timeout=self.timeout
             )
@@ -116,7 +116,7 @@ class APIService:
         try:
             logger.info(f"Fetching commits for project {project_id}")
             response = self.session.post(
-                f"{self.base_url}/api/discord/commits",
+                f"{self.base_url}/discord/commits",
                 json={"projectId": project_id, "hours": hours},
                 timeout=self.timeout
             )
@@ -133,7 +133,7 @@ class APIService:
         try:
             logger.info(f"Linking Discord user {discord_id} to email {email}")
             response = self.session.post(
-                f"{self.base_url}/api/discord/link",
+                f"{self.base_url}/discord/link",
                 json={"discordId": discord_id, "email": email},
                 timeout=self.timeout
             )
