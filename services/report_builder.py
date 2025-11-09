@@ -195,16 +195,28 @@ class ReportBuilder:
         )
         
         commands = [
-            ("!status [project_name]", "Show current status of a project"),
-            ("!mytasks", "Show tasks assigned to you (requires linking)"),
+            ("📊 **Project Commands**", ""),
+            ("!status [project_name]", "Show current status of a project or list all projects"),
+            ("!mytasks", "Show tasks assigned to you (requires account linking)"),
+            ("", ""),
+            ("📢 **Report Management**", ""),
+            ("!enable <project_name>", "Enable scheduled reports for a specific project"),
+            ("!disable <project_name>", "Disable scheduled reports for a specific project"),
+            ("!enabled", "List all projects with scheduled reports enabled"),
             ("!report", "Trigger a manual report (Admin only)"),
+            ("", ""),
+            ("🔗 **Account & Info**", ""),
             ("!link <email>", "Link your Discord account to web app account"),
+            ("!ping", "Check bot latency and status"),
             ("!help", "Show this help message"),
         ]
         
         for cmd, desc in commands:
-            embed.add_field(name=cmd, value=desc, inline=False)
+            if cmd and desc:
+                embed.add_field(name=cmd, value=desc, inline=False)
+            elif cmd:  # Header only
+                embed.add_field(name=cmd, value="​", inline=False)
         
-        embed.set_footer(text="Use !link to connect your Discord account for personalized features")
+        embed.set_footer(text="🔔 Scheduled reports: 8 AM & 8 PM IST daily • Use !enable to activate")
         
         return embed

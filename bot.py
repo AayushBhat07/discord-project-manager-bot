@@ -5,7 +5,9 @@ import sys
 import asyncio
 import ssl
 import random
-from typing import Optional
+import json
+import os
+from typing import Optional, List
 from datetime import datetime
 from aiohttp import web
 
@@ -47,6 +49,31 @@ bot = commands.Bot(command_prefix=COMMAND_PREFIX, intents=intents, help_command=
 api_service = APIService(API_BASE_URL)
 report_builder = ReportBuilder()
 scheduler = ReportScheduler(TIMEZONE)
+
+# Path to enabled projects file
+ENABLED_PROJECTS_FILE = os.path.join(os.path.dirname(__file__), 'enabled_projects.json')
+
+
+def load_enabled_projects() -> List[str]:
+    """Load list of enabled project IDs from file"""
+    try:
+        if os.path.exists(ENABLED_PROJECTS_FILE):
+            with open(ENABLED_PROJECTS_FILE, 'r') as f:
+                return json.load(f)
+        return []
+    except Exception as e:
+        logger.error(f"Failed to load enabled projects: {e}")
+        return []
+
+
+def save_enabled_projects(project_ids: List[str]) -> None:
+    """Save list of enabled project IDs to file"""
+    try:
+        with open(ENABLED_PROJECTS_FILE, 'w') as f:
+            json.dump(project_ids, f, indent=2)
+        logger.info(f"Saved {len(project_ids)} enabled projects")
+    except Exception as e:
+        logger.error(f"Failed to save enabled projects: {e}")
 
 
 # Cool rotating status messages
@@ -109,7 +136,7 @@ async def on_command_error(ctx, error):
 
 
 async def send_scheduled_reports():
-    """Send automated reports to Discord channel"""
+    """Send automated reports to Discord channel (only for enabled projects)"""
     logger.info("Starting scheduled report generation")
     
     channel = bot.get_channel(REPORT_CHANNEL_ID)
@@ -118,6 +145,13 @@ async def send_scheduled_reports():
         return
     
     try:
+        # Load enabled projects
+        enabled_project_ids = load_enabled_projects()
+        
+        if not enabled_project_ids:
+            logger.info("No projects enabled for scheduled reports. Use !enable <project_name> to enable.")
+            return
+        
         # Fetch all active projects
         projects = api_service.get_active_projects()
         
@@ -130,8 +164,20 @@ async def send_scheduled_reports():
             logger.info("No active projects to report")
             return
         
-        # Generate report for each project
-        for project in projects:
+        # Filter only enabled projects
+        enabled_projects = [
+            p for p in projects
+            if (p.get('_id') or p.get('id')) in enabled_project_ids
+        ]
+        
+        if not enabled_projects:
+            logger.warning(f"No enabled projects found. Enabled IDs: {enabled_project_ids}")
+            return
+        
+        logger.info(f"Sending reports for {len(enabled_projects)} enabled projects")
+        
+        # Generate report for each enabled project
+        for project in enabled_projects:
             try:
                 await send_project_report(channel, project, hours=12)
             except Exception as e:
@@ -141,7 +187,7 @@ async def send_scheduled_reports():
                 )
                 await channel.send(embed=error_embed)
         
-        logger.info(f"Completed scheduled reports for {len(projects)} projects")
+        logger.info(f"Completed scheduled reports for {len(enabled_projects)} projects")
         
     except Exception as e:
         logger.error(f"Failed to send scheduled reports: {e}", exc_info=True)
@@ -292,10 +338,10 @@ async def my_tasks(ctx):
             logger.error(f"API returned non-list data: {type(tasks)}")
             return
         
-        # Filter tasks assigned to this user
+        # Filter tasks assigned to this user (handle None assignees)
         my_tasks_list = [
             task for task in tasks 
-            if task.get('assignee', {}).get('discordId') == discord_id
+            if task.get('assignee') and task.get('assignee').get('discordId') == discord_id
         ]
         
         if not my_tasks_list:
@@ -365,6 +411,179 @@ async def ping(ctx):
     """Check bot latency"""
     latency = round(bot.latency * 1000)
     await ctx.send(f"🏓 Pong! Latency: {latency}ms")
+
+
+@bot.command(name='enable')
+async def enable_reports(ctx, *, project_name: str):
+    """📢 Enable scheduled reports for a specific project"""
+    try:
+        # Fetch all projects
+        projects = api_service.get_active_projects()
+        
+        if not isinstance(projects, list):
+            await ctx.send("❌ Invalid response from API. Please check backend configuration.")
+            return
+        
+        # Find matching project (case-insensitive)
+        project = next(
+            (p for p in projects if p.get('name', '').lower() == project_name.lower()),
+            None
+        )
+        
+        if not project:
+            await ctx.send(
+                f"❌ Project '{project_name}' not found.\n"
+                f"Use `!status` to see available projects."
+            )
+            return
+        
+        project_id = project.get('_id') or project.get('id')
+        if not project_id:
+            await ctx.send("❌ Project has no ID.")
+            return
+        
+        # Load current enabled projects
+        enabled = load_enabled_projects()
+        
+        # Check if already enabled
+        if project_id in enabled:
+            await ctx.send(f"ℹ️ Reports for **{project.get('name')}** are already enabled!")
+            return
+        
+        # Add to enabled list
+        enabled.append(project_id)
+        save_enabled_projects(enabled)
+        
+        embed = discord.Embed(
+            title="✅ Reports Enabled",
+            description=f"Scheduled reports are now **enabled** for:\n📊 **{project.get('name')}**",
+            color=0x00FF00
+        )
+        embed.add_field(
+            name="🔔 Report Schedule",
+            value=f"Reports will be sent at **8 AM** and **8 PM IST** daily.",
+            inline=False
+        )
+        embed.set_footer(text="Use !disable <project_name> to turn off reports")
+        
+        await ctx.send(embed=embed)
+        logger.info(f"Enabled reports for project: {project.get('name')} ({project_id})")
+        
+    except Exception as e:
+        logger.error(f"Enable command failed: {e}", exc_info=True)
+        await ctx.send(f"❌ Failed to enable reports: {str(e)}")
+
+
+@bot.command(name='disable')
+async def disable_reports(ctx, *, project_name: str):
+    """🔕 Disable scheduled reports for a specific project"""
+    try:
+        # Fetch all projects
+        projects = api_service.get_active_projects()
+        
+        if not isinstance(projects, list):
+            await ctx.send("❌ Invalid response from API. Please check backend configuration.")
+            return
+        
+        # Find matching project
+        project = next(
+            (p for p in projects if p.get('name', '').lower() == project_name.lower()),
+            None
+        )
+        
+        if not project:
+            await ctx.send(
+                f"❌ Project '{project_name}' not found.\n"
+                f"Use `!status` to see available projects."
+            )
+            return
+        
+        project_id = project.get('_id') or project.get('id')
+        if not project_id:
+            await ctx.send("❌ Project has no ID.")
+            return
+        
+        # Load current enabled projects
+        enabled = load_enabled_projects()
+        
+        # Check if already disabled
+        if project_id not in enabled:
+            await ctx.send(f"ℹ️ Reports for **{project.get('name')}** are already disabled!")
+            return
+        
+        # Remove from enabled list
+        enabled.remove(project_id)
+        save_enabled_projects(enabled)
+        
+        embed = discord.Embed(
+            title="🔕 Reports Disabled",
+            description=f"Scheduled reports are now **disabled** for:\n📊 **{project.get('name')}**",
+            color=0xFF9900
+        )
+        embed.set_footer(text="Use !enable <project_name> to turn on reports")
+        
+        await ctx.send(embed=embed)
+        logger.info(f"Disabled reports for project: {project.get('name')} ({project_id})")
+        
+    except Exception as e:
+        logger.error(f"Disable command failed: {e}", exc_info=True)
+        await ctx.send(f"❌ Failed to disable reports: {str(e)}")
+
+
+@bot.command(name='enabled')
+async def list_enabled(ctx):
+    """📊 List all projects with scheduled reports enabled"""
+    try:
+        # Load enabled project IDs
+        enabled_ids = load_enabled_projects()
+        
+        if not enabled_ids:
+            await ctx.send(
+                "📄 No projects have scheduled reports enabled.\n"
+                "Use `!enable <project_name>` to enable reports for a project."
+            )
+            return
+        
+        # Fetch all projects to get names
+        projects = api_service.get_active_projects()
+        
+        if not isinstance(projects, list):
+            await ctx.send("❌ Failed to fetch project list.")
+            return
+        
+        # Filter enabled projects
+        enabled_projects = [
+            p for p in projects
+            if (p.get('_id') or p.get('id')) in enabled_ids
+        ]
+        
+        if not enabled_projects:
+            await ctx.send("❌ No matching projects found for enabled IDs.")
+            return
+        
+        # Build embed
+        project_list = "\n".join([
+            f"• **{p.get('name', 'Unknown')}**{' (Team: ' + p.get('teamCode') + ')' if p.get('teamCode') else ''}"
+            for p in enabled_projects
+        ])
+        
+        embed = discord.Embed(
+            title="📢 Enabled Scheduled Reports",
+            description=f"Reports active for **{len(enabled_projects)}** project(s):\n\n{project_list}",
+            color=0x0099FF
+        )
+        embed.add_field(
+            name="🔔 Schedule",
+            value="Reports sent daily at **8 AM** and **8 PM IST**",
+            inline=False
+        )
+        embed.set_footer(text="Use !enable / !disable <project_name> to manage")
+        
+        await ctx.send(embed=embed)
+        
+    except Exception as e:
+        logger.error(f"Enabled command failed: {e}", exc_info=True)
+        await ctx.send(f"❌ Failed to list enabled projects: {str(e)}")
 
 
 # Health check endpoint for keeping Render awake
