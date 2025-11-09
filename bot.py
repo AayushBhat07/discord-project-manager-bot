@@ -292,10 +292,10 @@ async def my_tasks(ctx):
             logger.error(f"API returned non-list data: {type(tasks)}")
             return
         
-        # Filter tasks assigned to this user
+        # Filter tasks assigned to this user (handle None assignees)
         my_tasks_list = [
             task for task in tasks 
-            if task.get('assignee', {}).get('discordId') == discord_id
+            if task.get('assignee') and task.get('assignee').get('discordId') == discord_id
         ]
         
         if not my_tasks_list:
