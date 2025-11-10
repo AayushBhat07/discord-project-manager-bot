@@ -325,7 +325,7 @@ async def project_status(ctx, *, project_name: Optional[str] = None):
 
 @bot.command(name='mytasks')
 async def my_tasks(ctx):
-    """Show tasks assigned to the user"""
+    """Show tasks assigned to the user with detailed information"""
     discord_id = str(ctx.author.id)
     
     try:
@@ -351,32 +351,95 @@ async def my_tasks(ctx):
             )
             return
         
+        # Priority emoji and order
+        priority_emoji = {
+            'urgent': '🔴',
+            'high': '🟠',
+            'medium': '🟡',
+            'low': '🟢'
+        }
+        
+        # Group tasks by priority
+        priority_order = ['urgent', 'high', 'medium', 'low']
+        tasks_by_priority = {p: [] for p in priority_order}
+        
+        for task in my_tasks_list:
+            priority = task.get('priority', 'medium')
+            if priority in tasks_by_priority:
+                tasks_by_priority[priority].append(task)
+            else:
+                tasks_by_priority['medium'].append(task)  # Default to medium
+        
         # Build embed
         embed = discord.Embed(
-            title=f"📝 Your Tasks",
-            description=f"Tasks assigned to {ctx.author.mention}",
+            title="📋 Your Assigned Tasks",
+            description=f"Tasks for {ctx.author.mention}",
             color=0x0099FF
         )
         
-        pending = [t for t in my_tasks_list if t.get('status') != 'completed']
-        completed = [t for t in my_tasks_list if t.get('status') == 'completed']
+        # Helper function to format task
+        def format_task(task):
+            title = task.get('title', 'Untitled')
+            
+            # Format due date
+            due_date_str = "No due date"
+            if task.get('dueDate'):
+                try:
+                    from datetime import datetime as dt
+                    timestamp = task['dueDate'] / 1000  # Convert ms to seconds
+                    due_date = dt.fromtimestamp(timestamp)
+                    due_date_str = due_date.strftime('%b %d, %Y')
+                except:
+                    due_date_str = "Invalid date"
+            
+            # Format labels
+            labels = task.get('labels', [])
+            if labels and isinstance(labels, list) and len(labels) > 0:
+                labels_str = ", ".join(labels)
+            else:
+                labels_str = "None"
+            
+            # Format project
+            project_name = task.get('projectName', 'Unknown Project')
+            
+            return (
+                f"• **{title}**\n"
+                f"  📅 Due: {due_date_str}\n"
+                f"  🏷️ Labels: {labels_str}\n"
+                f"  📁 Project: {project_name}"
+            )
         
-        if pending:
-            pending_text = "\n".join([
-                f"• **{t.get('title')}** - {t.get('status')}"
-                for t in pending[:10]
-            ])
-            embed.add_field(name="⏳ Pending", value=pending_text, inline=False)
+        # Add tasks grouped by priority
+        task_count = 0
+        for priority in priority_order:
+            priority_tasks = tasks_by_priority[priority]
+            if priority_tasks:
+                emoji = priority_emoji[priority]
+                priority_name = priority.upper()
+                
+                tasks_text = "\n\n".join([format_task(t) for t in priority_tasks[:5]])
+                
+                embed.add_field(
+                    name=f"{emoji} {priority_name}",
+                    value=tasks_text,
+                    inline=False
+                )
+                
+                task_count += len(priority_tasks)
+                
+                # Add "more tasks" note if there are more than 5
+                if len(priority_tasks) > 5:
+                    embed.add_field(
+                        name="",
+                        value=f"_...and {len(priority_tasks) - 5} more {priority} tasks_",
+                        inline=False
+                    )
         
-        if completed:
-            completed_text = "\n".join([
-                f"• {t.get('title')}"
-                for t in completed[:5]
-            ])
-            embed.add_field(name="✅ Recently Completed", value=completed_text, inline=False)
+        # Add footer with total count
+        embed.set_footer(text=f"Total: {task_count} task{'s' if task_count != 1 else ''}")
         
         await ctx.send(embed=embed)
-        logger.info(f"MyTasks command executed by {ctx.author}")
+        logger.info(f"MyTasks command executed by {ctx.author} - {task_count} tasks")
         
     except Exception as e:
         logger.error(f"MyTasks command failed: {e}", exc_info=True)
