@@ -18,6 +18,25 @@ TIMEZONE = os.getenv('TIMEZONE', 'Asia/Kolkata')
 # Admin Configuration
 ADMIN_USER_IDS = [int(uid) for uid in os.getenv('ADMIN_USER_IDS', '').split(',') if uid]
 
+# Code Review Configuration
+REVIEW_RECIPIENT_MODE = os.getenv('REVIEW_RECIPIENT_MODE', 'specific')  # author, owner, specific
+SPECIFIC_DISCORD_USER_ID = int(os.getenv('SPECIFIC_DISCORD_USER_ID', '0')) if os.getenv('SPECIFIC_DISCORD_USER_ID') else None
+FALLBACK_CHANNEL_ID = int(os.getenv('FALLBACK_CHANNEL_ID', '0')) if os.getenv('FALLBACK_CHANNEL_ID') else None
+
+# Ollama Configuration
+OLLAMA_BASE_URL = os.getenv('OLLAMA_BASE_URL', 'http://localhost:11434')
+OLLAMA_MODEL = os.getenv('OLLAMA_MODEL', 'qwen2.5-coder:14b')
+
+# GitHub Configuration
+GITHUB_TOKEN = os.getenv('GITHUB_TOKEN', '')
+GITHUB_WEBHOOK_SECRET = os.getenv('GITHUB_WEBHOOK_SECRET', '')
+
+# Webhook Server
+WEBHOOK_PORT = int(os.getenv('WEBHOOK_PORT', '5000'))
+
+# User Mapping
+USER_MAPPING_FILE = os.getenv('USER_MAPPING_FILE', 'user_mappings.json')
+
 # API Endpoints
 ENDPOINTS = {
     'projects': f'{API_BASE_URL}/discord/projects',

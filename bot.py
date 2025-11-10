@@ -13,11 +13,21 @@ from aiohttp import web
 
 from config import (
     DISCORD_TOKEN, REPORT_CHANNEL_ID, COMMAND_PREFIX,
-    API_BASE_URL, REPORT_HOURS, TIMEZONE, ADMIN_USER_IDS
+    API_BASE_URL, REPORT_HOURS, TIMEZONE, ADMIN_USER_IDS,
+    # Code review config
+    REVIEW_RECIPIENT_MODE, SPECIFIC_DISCORD_USER_ID, FALLBACK_CHANNEL_ID,
+    OLLAMA_BASE_URL, OLLAMA_MODEL, GITHUB_TOKEN, GITHUB_WEBHOOK_SECRET,
+    WEBHOOK_PORT, USER_MAPPING_FILE
 )
 from services.api_service import APIService
 from services.report_builder import ReportBuilder
+from services.user_mapping_service import UserMappingService
+from services.github_pr_service import GitHubPRService
+from services.local_llm_service import LocalLLMService
+from services.code_review_builder import CodeReviewBuilder
 from utils.scheduler import ReportScheduler
+from webhooks.webhook_server import WebhookServer
+from webhooks.github_webhook import GitHubWebhookHandler
 
 # Configure logging
 logging.basicConfig(
@@ -35,6 +45,7 @@ intents = discord.Intents.default()
 intents.message_content = True
 intents.guilds = True
 intents.members = True
+intents.dm_messages = True  # Enable DM messages
 
 # Fix for macOS SSL certificate issue
 try:
@@ -49,6 +60,16 @@ bot = commands.Bot(command_prefix=COMMAND_PREFIX, intents=intents, help_command=
 api_service = APIService(API_BASE_URL)
 report_builder = ReportBuilder()
 scheduler = ReportScheduler(TIMEZONE)
+
+# Initialize code review services
+user_mapping_service = UserMappingService(USER_MAPPING_FILE)
+github_pr_service = GitHubPRService(GITHUB_TOKEN)
+llm_service = LocalLLMService(OLLAMA_BASE_URL, OLLAMA_MODEL)
+code_review_builder = CodeReviewBuilder()
+
+# Webhook handler (will be initialized after bot is ready)
+webhook_handler = None
+webhook_server = None
 
 # Path to enabled projects file
 ENABLED_PROJECTS_FILE = os.path.join(os.path.dirname(__file__), 'enabled_projects.json')
@@ -107,6 +128,8 @@ async def rotate_status():
 @bot.event
 async def on_ready():
     """Event handler for when bot is ready"""
+    global webhook_handler, webhook_server
+    
     logger.info(f'Bot connected as {bot.user.name} (ID: {bot.user.id})')
     logger.info(f'Connected to {len(bot.guilds)} guilds')
     
@@ -117,6 +140,36 @@ async def on_ready():
     # Schedule automated reports
     scheduler.schedule_reports(send_scheduled_reports, REPORT_HOURS)
     scheduler.start()
+    
+    # Initialize webhook handler
+    webhook_handler = GitHubWebhookHandler(
+        bot=bot,
+        github_service=github_pr_service,
+        llm_service=llm_service,
+        review_builder=code_review_builder,
+        user_mapping=user_mapping_service,
+        recipient_mode=REVIEW_RECIPIENT_MODE,
+        specific_user_id=SPECIFIC_DISCORD_USER_ID,
+        fallback_channel_id=FALLBACK_CHANNEL_ID
+    )
+    
+    # Start webhook server in background
+    if GITHUB_WEBHOOK_SECRET:
+        webhook_server = WebhookServer(
+            port=WEBHOOK_PORT,
+            webhook_secret=GITHUB_WEBHOOK_SECRET,
+            webhook_handler=webhook_handler.handle_pr_merged
+        )
+        bot.loop.run_in_executor(None, webhook_server.run)
+        logger.info(f"Webhook server started on port {WEBHOOK_PORT}")
+    else:
+        logger.warning("GitHub webhook secret not configured, webhook server disabled")
+    
+    # Test Ollama connection
+    if llm_service.test_connection():
+        logger.info(f"✅ Connected to Ollama at {OLLAMA_BASE_URL}")
+    else:
+        logger.warning(f"⚠️ Could not connect to Ollama at {OLLAMA_BASE_URL}")
     
     logger.info(f"Bot is ready! Next report in: {scheduler.get_next_run_time()}")
 
@@ -647,6 +700,97 @@ async def list_enabled(ctx):
     except Exception as e:
         logger.error(f"Enabled command failed: {e}", exc_info=True)
         await ctx.send(f"❌ Failed to list enabled projects: {str(e)}")
+
+
+@bot.command(name='map-user')
+async def map_user(ctx, github_username: str, discord_user: discord.User):
+    """🔗 Map a GitHub username to a Discord user for code reviews
+    
+    Usage: !map-user <github_username> @DiscordUser
+    Example: !map-user john_github @JohnDoe
+    """
+    try:
+        # Add mapping
+        success = user_mapping_service.add_mapping(github_username, discord_user.id)
+        
+        if success:
+            embed = code_review_builder.create_mapping_added_embed(github_username, discord_user.id)
+            embed.add_field(
+                name="Discord User",
+                value=discord_user.mention,
+                inline=False
+            )
+            await ctx.send(embed=embed)
+            logger.info(f"User mapping added by {ctx.author}: {github_username} -> {discord_user.id}")
+        else:
+            await ctx.send("❌ Failed to add user mapping.")
+    
+    except Exception as e:
+        logger.error(f"Map-user command failed: {e}", exc_info=True)
+        await ctx.send(f"❌ Failed to add mapping: {str(e)}")
+
+
+@bot.command(name='unmap-user')
+async def unmap_user(ctx, github_username: str):
+    """🔓 Remove a GitHub to Discord user mapping
+    
+    Usage: !unmap-user <github_username>
+    """
+    try:
+        success = user_mapping_service.remove_mapping(github_username)
+        
+        if success:
+            embed = discord.Embed(
+                title="✅ User Mapping Removed",
+                description=f"Removed mapping for GitHub user `{github_username}`",
+                color=0x00FF00
+            )
+            await ctx.send(embed=embed)
+            logger.info(f"User mapping removed by {ctx.author}: {github_username}")
+        else:
+            await ctx.send(f"❌ No mapping found for `{github_username}`.")
+    
+    except Exception as e:
+        logger.error(f"Unmap-user command failed: {e}", exc_info=True)
+        await ctx.send(f"❌ Failed to remove mapping: {str(e)}")
+
+
+@bot.command(name='list-mappings')
+async def list_mappings(ctx):
+    """📋 List all GitHub to Discord user mappings"""
+    try:
+        mappings = user_mapping_service.get_all_mappings()
+        
+        if not mappings:
+            await ctx.send("📄 No user mappings configured yet.\nUse `!map-user <github_username> @DiscordUser` to add one.")
+            return
+        
+        embed = discord.Embed(
+            title="🔗 GitHub → Discord User Mappings",
+            description=f"Total mappings: **{len(mappings)}**",
+            color=0x0099FF
+        )
+        
+        # Show mappings
+        mapping_text = "\n".join([
+            f"• `{github}` → `{discord_id}`"
+            for github, discord_id in list(mappings.items())[:20]  # Limit to 20
+        ])
+        
+        if len(mappings) > 20:
+            mapping_text += f"\n... and {len(mappings) - 20} more"
+        
+        embed.add_field(
+            name="Mappings",
+            value=mapping_text,
+            inline=False
+        )
+        
+        await ctx.send(embed=embed)
+    
+    except Exception as e:
+        logger.error(f"List-mappings command failed: {e}", exc_info=True)
+        await ctx.send(f"❌ Failed to list mappings: {str(e)}")
 
 
 # Health check endpoint for keeping Render awake
