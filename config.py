@@ -25,12 +25,18 @@ FALLBACK_CHANNEL_ID = int(os.getenv('FALLBACK_CHANNEL_ID', '0')) if os.getenv('F
 
 # Ollama Configuration
 OLLAMA_BASE_URL = os.getenv('OLLAMA_BASE_URL', 'http://localhost:11434')
-OLLAMA_MODEL = os.getenv('OLLAMA_MODEL', 'qwen2.5-coder:14b')
+OLLAMA_MODEL = os.getenv('OLLAMA_MODEL', 'llama3.1:8b')  # Smaller model for chat
+OLLAMA_CODE_MODEL = os.getenv('OLLAMA_CODE_MODEL', 'qwen2.5-coder:14b')  # Larger for code review
 
 # GitHub Configuration (SIMPLIFIED - No webhook needed!)
 GITHUB_TOKEN = os.getenv('GITHUB_TOKEN', '')
 GITHUB_REPOS_TO_WATCH = os.getenv('GITHUB_REPOS_TO_WATCH', '').split(',') if os.getenv('GITHUB_REPOS_TO_WATCH') else []
 CODE_REVIEW_CHECK_INTERVAL = int(os.getenv('CODE_REVIEW_CHECK_INTERVAL', '300'))  # Check every 5 minutes
+
+# Conversational AI Configuration
+ENABLE_CONVERSATIONAL_AI = os.getenv('ENABLE_CONVERSATIONAL_AI', 'true').lower() == 'true'
+CONVERSATION_HISTORY_PATH = os.getenv('CONVERSATION_HISTORY_PATH', 'data/conversation_history.json')
+MAX_CONVERSATION_HISTORY = int(os.getenv('MAX_CONVERSATION_HISTORY', '10'))
 
 # User Mapping
 USER_MAPPING_FILE = os.getenv('USER_MAPPING_FILE', 'user_mappings.json')

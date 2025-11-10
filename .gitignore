@@ -16,6 +16,9 @@ ENV/
 *.log
 logs/
 
+# Conversation history (contains private chat data)
+data/conversation_history.json
+
 # IDE
 .vscode/
 .idea/

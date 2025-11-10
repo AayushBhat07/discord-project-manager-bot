@@ -16,8 +16,10 @@ from config import (
     API_BASE_URL, REPORT_HOURS, TIMEZONE, ADMIN_USER_IDS,
     # Code review config
     REVIEW_RECIPIENT_MODE, SPECIFIC_DISCORD_USER_ID, FALLBACK_CHANNEL_ID,
-    OLLAMA_BASE_URL, OLLAMA_MODEL, GITHUB_TOKEN, 
-    GITHUB_REPOS_TO_WATCH, CODE_REVIEW_CHECK_INTERVAL, USER_MAPPING_FILE
+    OLLAMA_BASE_URL, OLLAMA_MODEL, OLLAMA_CODE_MODEL, GITHUB_TOKEN, 
+    GITHUB_REPOS_TO_WATCH, CODE_REVIEW_CHECK_INTERVAL, USER_MAPPING_FILE,
+    # Conversational AI config
+    ENABLE_CONVERSATIONAL_AI, CONVERSATION_HISTORY_PATH, MAX_CONVERSATION_HISTORY
 )
 from services.api_service import APIService
 from services.report_builder import ReportBuilder
@@ -26,6 +28,9 @@ from services.github_pr_service import GitHubPRService
 from services.github_poll_service import GitHubPollService
 from services.local_llm_service import LocalLLMService
 from services.code_review_builder import CodeReviewBuilder
+from services.conversational_ai_service import ConversationalAIService
+from services.conversation_manager import ConversationManager
+from services.webapp_query_service import WebAppQueryService
 from utils.scheduler import ReportScheduler
 
 # Configure logging
@@ -64,8 +69,13 @@ scheduler = ReportScheduler(TIMEZONE)
 user_mapping_service = UserMappingService(USER_MAPPING_FILE)
 github_pr_service = GitHubPRService(GITHUB_TOKEN)
 github_poll_service = GitHubPollService(github_pr_service, GITHUB_REPOS_TO_WATCH)
-llm_service = LocalLLMService(OLLAMA_BASE_URL, OLLAMA_MODEL)
+llm_service = LocalLLMService(OLLAMA_BASE_URL, OLLAMA_CODE_MODEL)
 code_review_builder = CodeReviewBuilder()
+
+# Initialize conversational AI services
+conversational_ai = ConversationalAIService(OLLAMA_BASE_URL, OLLAMA_MODEL)
+conversation_manager = ConversationManager(CONVERSATION_HISTORY_PATH, MAX_CONVERSATION_HISTORY)
+webapp_query = WebAppQueryService(api_service)
 
 # Path to enabled projects file
 ENABLED_PROJECTS_FILE = os.path.join(os.path.dirname(__file__), 'enabled_projects.json')
@@ -165,6 +175,105 @@ async def on_command_error(ctx, error):
     else:
         logger.error(f"Command error: {error}", exc_info=True)
         await ctx.send("❌ An error occurred while processing your command.")
+
+
+@bot.event
+async def on_message(message):
+    """🤖 Handle all messages - route DMs to conversational AI"""
+    
+    # Ignore bot's own messages
+    if message.author == bot.user:
+        return
+    
+    # Route DMs to conversational AI (if not a command)
+    if isinstance(message.channel, discord.DMChannel) and ENABLE_CONVERSATIONAL_AI:
+        if not message.content.startswith(COMMAND_PREFIX):
+            await handle_conversation(message)
+            return
+    
+    # Process commands normally
+    await bot.process_commands(message)
+
+
+async def handle_conversation(message):
+    """💬 Handle conversational AI in DMs"""
+    user_id = str(message.author.id)
+    user_question = message.content.strip()
+    
+    # Show typing indicator
+    async with message.channel.typing():
+        try:
+            # Get conversation history and context
+            history = conversation_manager.get_history(user_id)
+            context = conversation_manager.get_context(user_id)
+            
+            # First message? Send welcome
+            if not history:
+                welcome = (
+                    "👋 Hi! I'm PM Bot, your AI project management assistant!\n\n"
+                    "You can ask me natural questions like:\n"
+                    "• How's the mobile app going?\n"
+                    "• What's John working on?\n"
+                    "• Are we on track for Friday?\n\n"
+                    "What would you like to know?"
+                )
+                await message.reply(welcome)
+                conversation_manager.add_message(user_id, 'assistant', welcome)
+                return
+            
+            # Analyze question and fetch relevant data
+            logger.info(f"Processing question from {message.author}: {user_question}")
+            context_data = webapp_query.analyze_question_and_fetch_data(user_question, context)
+            
+            # Generate AI response
+            ai_response = conversational_ai.chat(
+                user_question=user_question,
+                context_data=context_data,
+                conversation_history=history
+            )
+            
+            if not ai_response:
+                ai_response = (
+                    "😔 Sorry, I'm having trouble with the AI service right now. "
+                    "Please try again in a moment!"
+                )
+            
+            # Send response
+            await message.reply(ai_response)
+            
+            # Update conversation history
+            conversation_manager.add_message(user_id, 'user', user_question)
+            conversation_manager.add_message(user_id, 'assistant', ai_response)
+            
+            # Extract and update context from question
+            await update_context_from_question(user_id, user_question, context_data)
+            
+            logger.info(f"Successfully responded to {message.author}")
+        
+        except Exception as e:
+            logger.error(f"Conversation handling failed: {e}", exc_info=True)
+            error_msg = (
+                "❌ Oops! Something went wrong. Try rephrasing your question or use `!reset` to start fresh."
+            )
+            await message.reply(error_msg)
+
+
+async def update_context_from_question(user_id: str, question: str, data: Dict[str, Any]):
+    """Update conversation context based on question and data"""
+    question_lower = question.lower()
+    
+    # Extract project name if mentioned
+    if 'projects' in data and data['projects']:
+        # User likely asking about first project in results
+        project_name = data['projects'][0].get('name')
+        conversation_manager.update_context(user_id, project=project_name, topic='project_status')
+    
+    # Extract user name if mentioned
+    common_names = ['john', 'jane', 'bob', 'alice', 'sarah', 'mike', 'tom']
+    for name in common_names:
+        if name in question_lower:
+            conversation_manager.update_context(user_id, user=name.capitalize())
+            break
 
 
 async def send_scheduled_reports():
@@ -881,6 +990,116 @@ async def list_mappings(ctx):
     except Exception as e:
         logger.error(f"List-mappings command failed: {e}", exc_info=True)
         await ctx.send(f"❌ Failed to list mappings: {str(e)}")
+
+
+@bot.command(name='reset')
+async def reset_conversation(ctx):
+    """🔄 Reset your conversation history with the AI"""
+    if not isinstance(ctx.channel, discord.DMChannel):
+        await ctx.send("⚠️ This command only works in DMs!")
+        return
+    
+    try:
+        user_id = str(ctx.author.id)
+        conversation_manager.reset_conversation(user_id)
+        
+        embed = discord.Embed(
+            title="🔄 Conversation Reset",
+            description="Your conversation history has been cleared!\n\nStart fresh by asking me anything about your projects.",
+            color=0x00FF00
+        )
+        await ctx.send(embed=embed)
+        logger.info(f"Reset conversation for {ctx.author}")
+    
+    except Exception as e:
+        logger.error(f"Reset command failed: {e}", exc_info=True)
+        await ctx.send(f"❌ Failed to reset conversation: {str(e)}")
+
+
+@bot.command(name='context')
+async def show_context(ctx):
+    """🧠 Show what the AI remembers about your conversation"""
+    if not isinstance(ctx.channel, discord.DMChannel):
+        await ctx.send("⚠️ This command only works in DMs!")
+        return
+    
+    try:
+        user_id = str(ctx.author.id)
+        context_summary = conversation_manager.get_context_summary(user_id)
+        
+        embed = discord.Embed(
+            title="🧠 Conversation Context",
+            description=context_summary,
+            color=0x0099FF
+        )
+        
+        history = conversation_manager.get_history(user_id)
+        if history:
+            embed.add_field(
+                name="💬 Messages",
+                value=f"{len(history)} messages in history",
+                inline=True
+            )
+        
+        await ctx.send(embed=embed)
+    
+    except Exception as e:
+        logger.error(f"Context command failed: {e}", exc_info=True)
+        await ctx.send(f"❌ Failed to show context: {str(e)}")
+
+
+@bot.command(name='help-chat')
+async def help_chat(ctx):
+    """🎓 Show example questions for the conversational AI"""
+    embed = discord.Embed(
+        title="🤖 Chat with PM Bot",
+        description="Just DM me naturally! No commands needed.",
+        color=0x0099FF
+    )
+    
+    embed.add_field(
+        name="📊 Project Status",
+        value=(
+            "• How's the mobile app going?\n"
+            "• What's the progress on Project X?\n"
+            "• Show me pending tasks"
+        ),
+        inline=False
+    )
+    
+    embed.add_field(
+        name="👥 Team Questions",
+        value=(
+            "• What's John working on?\n"
+            "• Who's assigned to the mobile app?\n"
+            "• Show me Sarah's tasks"
+        ),
+        inline=False
+    )
+    
+    embed.add_field(
+        name="📅 Deadlines",
+        value=(
+            "• What's due this week?\n"
+            "• Are we on track for Friday?\n"
+            "• Any overdue tasks?"
+        ),
+        inline=False
+    )
+    
+    embed.add_field(
+        name="🛠️ Utilities",
+        value=(
+            "`!reset` - Clear conversation history\n"
+            "`!context` - Show what I remember\n"
+            "`!help-chat` - Show this help"
+        ),
+        inline=False
+    )
+    
+    embed.set_footer(text="👉 Just send me a DM and start chatting!")
+    
+    await ctx.send(embed=embed)
 
 
 # Health check endpoint for keeping Render awake
