@@ -1,34 +1,69 @@
 # 🤖 Discord Project Manager Bot
 
-> Your project's overachieving assistant that never sleeps ☕️
+> Your project's overachieving **AI-powered** assistant that never sleeps ☕️
 
 [![Python](https://img.shields.io/badge/Python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![discord.py](https://img.shields.io/badge/discord.py-2.0+-blue.svg)](https://github.com/Rapptz/discord.py)
+[![Ollama](https://img.shields.io/badge/Ollama-AI%20Powered-green.svg)](https://ollama.ai)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-A production-ready Discord bot that monitors your project management web application and sends automated 12-hour reports to Discord channels.
+A production-ready Discord bot with **local AI integration** that monitors your project management web application, provides intelligent code reviews, and enables natural language conversations - all via Discord DMs and channels.
 
 ![Bot Demo](https://img.shields.io/badge/Status-Production%20Ready-success)
+![AI Powered](https://img.shields.io/badge/AI-Ollama%20Local-blue)
 
 ## ✨ Features
 
-✅ **Automated 12-Hour Reports** - Sends comprehensive project status updates at 8 AM and 8 PM IST \
-✅ **Task Tracking** - Monitor completed, pending, and overdue tasks \
-✅ **Team Performance** - View user completion statistics \
-✅ **GitHub Integration** - Track recent commits and code changes \
-✅ **User Mentions** - Automatically @mentions users with pending tasks \
-✅ **Manual Commands** - Get status updates on demand \
-✅ **Account Linking** - Link Discord accounts to web app users \
+### 📊 **Project Management**
+✅ **Automated 12-Hour Reports** - Sends comprehensive project status updates at 8 AM and 8 PM IST
+✅ **Project-Specific Reports** - Enable/disable reports per project with `!enable` and `!disable`
+✅ **Task Tracking** - Monitor completed, pending, and overdue tasks grouped by priority
+✅ **Team Performance** - View user completion statistics
+✅ **GitHub Integration** - Track recent commits and code changes
+✅ **User Mentions** - Automatically @mentions users with pending tasks
+✅ **Account Linking** - Link Discord accounts to web app users
 
-## Quick Start
+### 🤖 **AI-Powered Code Reviews** (NEW!)
+✅ **Automatic PR Reviews** - AI analyzes every merged pull request using local Ollama
+✅ **Security Scanning** - Identifies vulnerabilities and potential security issues
+✅ **Smart Polling** - Checks GitHub every 5 minutes (no webhooks needed!)
+✅ **Private DM Delivery** - Code reviews sent directly to you or PR authors
+✅ **User Mapping** - Map GitHub usernames to Discord users for targeted reviews
+✅ **Detailed Analysis** - File-by-file review with improvement suggestions
 
-### 1. Install Dependencies
+### 💬 **Conversational AI Assistant** (NEW!)
+✅ **Natural Language Chat** - Ask questions naturally in DMs (no commands!)
+✅ **Context-Aware** - Remembers conversation history and current topic
+✅ **Smart Data Fetching** - Automatically pulls relevant project/task data
+✅ **Local Privacy** - All AI runs on your laptop using Ollama (no external APIs)
+✅ **Conversation Memory** - Maintains context across 10 messages
+✅ **Follow-up Questions** - Understands references like "What about John?"
+
+## 🚀 Quick Start
+
+### Prerequisites
+- **Python 3.10+**
+- **Discord Bot Token** ([Get one here](https://discord.com/developers/applications))
+- **Ollama** (for AI features) - [Install here](https://ollama.ai)
+- **GitHub Personal Access Token** (for code reviews) - [Create here](https://github.com/settings/tokens)
+
+### 1. Install Ollama and AI Models
 
 ```bash
-pip install -r requirements.txt
+# Install Ollama (macOS)
+brew install ollama
+
+# Or download from https://ollama.ai for other platforms
+
+# Start Ollama server
+ollama serve &
+
+# Pull AI models
+ollama pull llama3.1:8b          # For conversational AI (chat)
+ollama pull qwen2.5-coder:14b    # For code reviews
 ```
 
-Or use a virtual environment (recommended):
+### 2. Install Python Dependencies
 
 ```bash
 python3 -m venv venv
@@ -36,7 +71,7 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-### 2. Configure Environment
+### 3. Configure Environment
 
 Copy `.env.example` to `.env` and fill in your credentials:
 
@@ -44,23 +79,43 @@ Copy `.env.example` to `.env` and fill in your credentials:
 cp .env.example .env
 ```
 
-Edit `.env`:
+Edit `.env` with your configuration:
 
 ```env
+# Discord Configuration
 DISCORD_BOT_TOKEN=your_bot_token_here
 REPORT_CHANNEL_ID=your_channel_id
+FALLBACK_CHANNEL_ID=your_fallback_channel_id
+
+# Web App API
 WEBAPP_API_URL=https://your-app.convex.site
+
+# AI Features (Ollama)
+OLLAMA_BASE_URL=http://localhost:11434
+OLLAMA_MODEL=llama3.1:8b
+OLLAMA_CODE_MODEL=qwen2.5-coder:14b
+ENABLE_CONVERSATIONAL_AI=true
+
+# Code Reviews
+GITHUB_TOKEN=ghp_your_github_token_here
+GITHUB_REPOS_TO_WATCH=owner/repo1,owner/repo2
+REVIEW_RECIPIENT_MODE=specific  # or 'author' or 'owner'
+SPECIFIC_DISCORD_USER_ID=your_discord_user_id
 ```
 
-### 3. Test Configuration
+### 4. Initialize User Mappings (for Code Reviews)
 
-Run the test script to verify everything is set up correctly:
+Create `user_mappings.json` to map GitHub usernames to Discord IDs:
 
-```bash
-python test_setup.py
+```json
+{
+  "your_github_username": "your_discord_user_id"
+}
 ```
 
-### 4. Start the Bot
+Or use the bot command after starting: `!map-user <github_username> @DiscordUser`
+
+### 5. Start the Bot
 
 **Using the start script:**
 ```bash
@@ -96,45 +151,81 @@ python bot.py
 
 ## 📋 Commands
 
+### Project Management Commands
 | Command | Description | Example |
 |---------|-------------|---------|
 | `!help` | Show all available commands | `!help` |
+| `!status [project]` | Show project status or list all projects | `!status Mobile App` |
+| `!mytasks` | Show your assigned tasks (grouped by priority) | `!mytasks` |
 | `!report` | Trigger manual report (Admin only) | `!report` |
-| `!status [project]` | Show status of a specific project | `!status Website Redesign` |
-| `!mytasks` | Show your assigned tasks | `!mytasks` |
+| `!enable <project>` | Enable scheduled reports for a project | `!enable Mobile App` |
+| `!disable <project>` | Disable scheduled reports for a project | `!disable Mobile App` |
+| `!enabled` | List projects with reports enabled | `!enabled` |
 | `!link <email>` | Link Discord account to web app | `!link user@example.com` |
-| `!ping` | Check bot latency | `!ping` |
+| `!ping` | Check bot latency and status | `!ping` |
+
+### AI Code Review Commands
+| Command | Description | Example |
+|---------|-------------|---------|
+| `!map-user <github> @user` | Map GitHub username to Discord user | `!map-user john_dev @John#1234` |
+| `!unmap-user <github>` | Remove GitHub to Discord mapping | `!unmap-user john_dev` |
+| `!list-mappings` | Show all user mappings | `!list-mappings` |
+
+### Conversational AI (in DMs)
+| Command | Description | Example |
+|---------|-------------|---------|
+| Just chat naturally! | Ask questions about projects/tasks | `How's the mobile app going?` |
+| `!reset` | Clear conversation history | `!reset` |
+| `!context` | Show what the bot remembers | `!context` |
+| `!help-chat` | Show example questions | `!help-chat` |
 
 ## 📁 Project Structure
 
 ```
 discord-bot/
-├── bot.py                      # Main bot file
-├── config.py                   # Configuration and constants
+├── bot.py                              # Main bot file with AI integration
+├── config.py                           # Configuration and constants
 ├── services/
-│   ├── api_service.py         # API calls to web app
-│   └── report_builder.py      # Discord embed builder
+│   ├── api_service.py                 # API calls to web app
+│   ├── report_builder.py              # Discord embed builder
+│   ├── github_pr_service.py           # GitHub API integration
+│   ├── github_poll_service.py         # Poll GitHub for merged PRs
+│   ├── local_llm_service.py           # Ollama AI for code reviews
+│   ├── conversational_ai_service.py   # Chat AI service
+│   ├── conversation_manager.py        # Conversation history manager
+│   ├── webapp_query_service.py        # Smart data fetching
+│   ├── code_review_builder.py         # Code review embeds
+│   └── user_mapping_service.py        # GitHub↔Discord mapping
 ├── utils/
-│   ├── scheduler.py           # 12-hour scheduling
-│   └── formatters.py          # Text formatting utilities
-├── .env                       # Environment variables (not in git)
-├── .env.example               # Example environment file
-├── requirements.txt           # Python dependencies
-├── start.sh                   # Startup script
-├── test_setup.py             # Configuration test script
-└── README.md                  # This file
+│   ├── scheduler.py                   # 12-hour scheduling
+│   ├── formatters.py                  # Text formatting utilities
+│   └── diff_analyzer.py               # Git diff parsing
+├── data/
+│   └── conversation_history.json      # Conversation memory (gitignored)
+├── user_mappings.json                 # GitHub→Discord user mappings
+├── enabled_projects.json              # Projects with reports enabled
+├── .env                              # Environment variables (not in git)
+├── .env.example                      # Example environment file
+├── requirements.txt                  # Python dependencies
+├── run_bot.sh                        # Auto-start script (macOS)
+└── README.md                         # This file
 ```
 
 ## 🔌 API Endpoints
 
-The bot expects these endpoints from your Convex web app (use `.convex.site` domain):
+The bot expects these endpoints from your Convex web app:
 
+**Project Management:**
 - `GET /discord/projects` - Fetch all active projects
 - `POST /discord/tasks/recent` - Fetch tasks updated in last N hours
 - `POST /discord/stats` - Fetch user completion statistics
 - `POST /discord/incomplete` - Fetch pending/overdue tasks
 - `POST /discord/commits` - Fetch recent GitHub commits
 - `POST /discord/link` - Link Discord user to web app user
+
+**AI Features:**
+- Uses **GitHub REST API** for pull request data
+- Uses **local Ollama** for AI analysis (no external API needed!)
 
 ## 📊 Report Format
 
