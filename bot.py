@@ -16,18 +16,17 @@ from config import (
     API_BASE_URL, REPORT_HOURS, TIMEZONE, ADMIN_USER_IDS,
     # Code review config
     REVIEW_RECIPIENT_MODE, SPECIFIC_DISCORD_USER_ID, FALLBACK_CHANNEL_ID,
-    OLLAMA_BASE_URL, OLLAMA_MODEL, GITHUB_TOKEN, GITHUB_WEBHOOK_SECRET,
-    WEBHOOK_PORT, USER_MAPPING_FILE
+    OLLAMA_BASE_URL, OLLAMA_MODEL, GITHUB_TOKEN, 
+    GITHUB_REPOS_TO_WATCH, CODE_REVIEW_CHECK_INTERVAL, USER_MAPPING_FILE
 )
 from services.api_service import APIService
 from services.report_builder import ReportBuilder
 from services.user_mapping_service import UserMappingService
 from services.github_pr_service import GitHubPRService
+from services.github_poll_service import GitHubPollService
 from services.local_llm_service import LocalLLMService
 from services.code_review_builder import CodeReviewBuilder
 from utils.scheduler import ReportScheduler
-from webhooks.webhook_server import WebhookServer
-from webhooks.github_webhook import GitHubWebhookHandler
 
 # Configure logging
 logging.basicConfig(
@@ -64,12 +63,9 @@ scheduler = ReportScheduler(TIMEZONE)
 # Initialize code review services
 user_mapping_service = UserMappingService(USER_MAPPING_FILE)
 github_pr_service = GitHubPRService(GITHUB_TOKEN)
+github_poll_service = GitHubPollService(github_pr_service, GITHUB_REPOS_TO_WATCH)
 llm_service = LocalLLMService(OLLAMA_BASE_URL, OLLAMA_MODEL)
 code_review_builder = CodeReviewBuilder()
-
-# Webhook handler (will be initialized after bot is ready)
-webhook_handler = None
-webhook_server = None
 
 # Path to enabled projects file
 ENABLED_PROJECTS_FILE = os.path.join(os.path.dirname(__file__), 'enabled_projects.json')
@@ -128,7 +124,6 @@ async def rotate_status():
 @bot.event
 async def on_ready():
     """Event handler for when bot is ready"""
-    global webhook_handler, webhook_server
     
     logger.info(f'Bot connected as {bot.user.name} (ID: {bot.user.id})')
     logger.info(f'Connected to {len(bot.guilds)} guilds')
@@ -141,29 +136,13 @@ async def on_ready():
     scheduler.schedule_reports(send_scheduled_reports, REPORT_HOURS)
     scheduler.start()
     
-    # Initialize webhook handler
-    webhook_handler = GitHubWebhookHandler(
-        bot=bot,
-        github_service=github_pr_service,
-        llm_service=llm_service,
-        review_builder=code_review_builder,
-        user_mapping=user_mapping_service,
-        recipient_mode=REVIEW_RECIPIENT_MODE,
-        specific_user_id=SPECIFIC_DISCORD_USER_ID,
-        fallback_channel_id=FALLBACK_CHANNEL_ID
-    )
-    
-    # Start webhook server in background
-    if GITHUB_WEBHOOK_SECRET:
-        webhook_server = WebhookServer(
-            port=WEBHOOK_PORT,
-            webhook_secret=GITHUB_WEBHOOK_SECRET,
-            webhook_handler=webhook_handler.handle_pr_merged
-        )
-        bot.loop.run_in_executor(None, webhook_server.run)
-        logger.info(f"Webhook server started on port {WEBHOOK_PORT}")
+    # Start GitHub polling for code reviews (MUCH SIMPLER!)
+    if GITHUB_TOKEN and GITHUB_REPOS_TO_WATCH:
+        bot.loop.create_task(poll_github_for_reviews())
+        logger.info(f"✅ GitHub polling started for repos: {', '.join(GITHUB_REPOS_TO_WATCH)}")
+        logger.info(f"   Checking every {CODE_REVIEW_CHECK_INTERVAL} seconds")
     else:
-        logger.warning("GitHub webhook secret not configured, webhook server disabled")
+        logger.warning("⚠️ GitHub polling disabled (missing GITHUB_TOKEN or GITHUB_REPOS_TO_WATCH)")
     
     # Test Ollama connection
     if llm_service.test_connection():
@@ -248,6 +227,117 @@ async def send_scheduled_reports():
             f"Failed to fetch projects from API: {str(e)}"
         )
         await channel.send(embed=error_embed)
+
+
+async def poll_github_for_reviews():
+    """🔄 Periodically check GitHub for new merged PRs and send code reviews via DM"""
+    await bot.wait_until_ready()
+    
+    logger.info("🔍 GitHub polling loop started")
+    
+    while not bot.is_closed():
+        try:
+            # Check for newly merged PRs
+            merged_prs = github_poll_service.get_recently_merged_prs(hours=1)
+            
+            if merged_prs:
+                logger.info(f"🆕 Found {len(merged_prs)} new merged PRs!")
+                
+                for pr_info in merged_prs:
+                    try:
+                        # Fetch full PR data
+                        pr_data = github_pr_service.get_pr_data(
+                            pr_info['repo_name'],
+                            pr_info['pr_number']
+                        )
+                        
+                        if not pr_data:
+                            logger.error(f"Failed to fetch PR data for {pr_info['repo_name']}#{pr_info['pr_number']}")
+                            continue
+                        
+                        # Generate AI review
+                        logger.info(f"🤖 Generating AI review for PR #{pr_data['number']}...")
+                        ai_review = llm_service.review_code(pr_data)
+                        
+                        # Optional security scan
+                        security_notes = None
+                        if ai_review:
+                            logger.info("🔒 Running security scan...")
+                            security_notes = llm_service.security_scan(pr_data)
+                        
+                        # Determine recipient
+                        recipient_id = await determine_review_recipient(pr_data)
+                        
+                        if recipient_id:
+                            await send_code_review_dm(recipient_id, pr_data, ai_review, security_notes)
+                        else:
+                            await send_review_to_fallback(pr_data, ai_review, security_notes, pr_data.get('author'))
+                    
+                    except Exception as e:
+                        logger.error(f"Failed to process PR {pr_info}: {e}", exc_info=True)
+            
+            # Wait before next check
+            await asyncio.sleep(CODE_REVIEW_CHECK_INTERVAL)
+        
+        except Exception as e:
+            logger.error(f"Error in GitHub polling loop: {e}", exc_info=True)
+            await asyncio.sleep(CODE_REVIEW_CHECK_INTERVAL)
+
+
+async def determine_review_recipient(pr_data: dict) -> Optional[int]:
+    """Determine which Discord user should receive the code review DM"""
+    
+    if REVIEW_RECIPIENT_MODE == 'specific' and SPECIFIC_DISCORD_USER_ID:
+        return SPECIFIC_DISCORD_USER_ID
+    
+    elif REVIEW_RECIPIENT_MODE == 'author':
+        github_username = pr_data.get('author')
+        return user_mapping_service.get_discord_id(github_username)
+    
+    elif REVIEW_RECIPIENT_MODE == 'owner':
+        github_username = pr_data.get('repo_owner')
+        return user_mapping_service.get_discord_id(github_username)
+    
+    return None
+
+
+async def send_code_review_dm(user_id: int, pr_data: dict, ai_review: str, security_notes: str = None):
+    """Send code review DM to a Discord user"""
+    
+    try:
+        user = await bot.fetch_user(user_id)
+        embed = code_review_builder.create_review_embed(pr_data, ai_review, security_notes)
+        
+        try:
+            await user.send(embed=embed)
+            logger.info(f"✅ Sent code review DM to {user.name} ({user_id})")
+        
+        except discord.Forbidden:
+            logger.warning(f"⚠️ Cannot DM user {user_id} - Using fallback channel")
+            await send_review_to_fallback(pr_data, ai_review, security_notes, pr_data.get('author'), user.mention)
+    
+    except Exception as e:
+        logger.error(f"Failed to send DM to {user_id}: {e}")
+        await send_review_to_fallback(pr_data, ai_review, security_notes, pr_data.get('author'))
+
+
+async def send_review_to_fallback(pr_data: dict, ai_review: str, security_notes: str, github_username: str, user_mention: str = None):
+    """Send code review to fallback channel when DM fails"""
+    
+    if not FALLBACK_CHANNEL_ID:
+        logger.error("No fallback channel configured!")
+        return
+    
+    try:
+        channel = bot.get_channel(FALLBACK_CHANNEL_ID)
+        if channel:
+            embed = code_review_builder.create_fallback_embed(pr_data, ai_review, security_notes, github_username)
+            mention = user_mention if user_mention else f"@{github_username}"
+            await channel.send(content=f"{mention} Code review (DM failed):", embed=embed)
+            logger.info(f"📢 Sent review to fallback channel for {github_username}")
+    
+    except Exception as e:
+        logger.error(f"Failed to send to fallback channel: {e}")
 
 
 async def send_project_report(channel, project: dict, hours: int = 12):

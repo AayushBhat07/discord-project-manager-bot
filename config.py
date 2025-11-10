@@ -27,12 +27,10 @@ FALLBACK_CHANNEL_ID = int(os.getenv('FALLBACK_CHANNEL_ID', '0')) if os.getenv('F
 OLLAMA_BASE_URL = os.getenv('OLLAMA_BASE_URL', 'http://localhost:11434')
 OLLAMA_MODEL = os.getenv('OLLAMA_MODEL', 'qwen2.5-coder:14b')
 
-# GitHub Configuration
+# GitHub Configuration (SIMPLIFIED - No webhook needed!)
 GITHUB_TOKEN = os.getenv('GITHUB_TOKEN', '')
-GITHUB_WEBHOOK_SECRET = os.getenv('GITHUB_WEBHOOK_SECRET', '')
-
-# Webhook Server
-WEBHOOK_PORT = int(os.getenv('WEBHOOK_PORT', '5000'))
+GITHUB_REPOS_TO_WATCH = os.getenv('GITHUB_REPOS_TO_WATCH', '').split(',') if os.getenv('GITHUB_REPOS_TO_WATCH') else []
+CODE_REVIEW_CHECK_INTERVAL = int(os.getenv('CODE_REVIEW_CHECK_INTERVAL', '300'))  # Check every 5 minutes
 
 # User Mapping
 USER_MAPPING_FILE = os.getenv('USER_MAPPING_FILE', 'user_mappings.json')
