@@ -51,6 +51,10 @@ Always base your answers on the provided data. Don't make up information."""
             # Build context from data
             data_context = self._format_context_data(context_data)
             
+            # Trim overly long questions
+            if len(user_question) > 2000:
+                user_question = user_question[:2000] + "\n... (truncated)"
+            
             # Build conversation history
             messages = [{"role": "system", "content": self.system_prompt}]
             
@@ -58,7 +62,7 @@ Always base your answers on the provided data. Don't make up information."""
             for msg in conversation_history[-10:]:  # Last 10 messages
                 messages.append({
                     "role": msg["role"],
-                    "content": msg["content"]
+                    "content": msg["content"][:4000]  # Prevent oversized context
                 })
             
             # Add current question with data context
@@ -70,26 +74,37 @@ Always base your answers on the provided data. Don't make up information."""
             
             logger.info(f"Sending chat request to {self.model}")
             
-            # Call Ollama
-            response = self.client.chat(
-                model=self.model,
-                messages=messages,
-                options={
-                    "temperature": 0.7,  # Balanced creativity
-                    "top_p": 0.9,
-                    "num_predict": 500,  # Max ~400 words
-                }
-            )
-            
-            ai_response = response['message']['content']
-            logger.info(f"Received AI response ({len(ai_response)} chars)")
-            
-            return ai_response
+            # Retry up to 3 times on transient failures
+            last_error = None
+            for attempt in range(3):
+                try:
+                    response = self.client.chat(
+                        model=self.model,
+                        messages=messages,
+                        options={
+                            "temperature": 0.7,
+                            "top_p": 0.9,
+                            "num_predict": 500,
+                        }
+                    )
+                    ai_response = response['message']['content']
+                    logger.info(f"Received AI response ({len(ai_response)} chars)")
+                    return ai_response
+                except Exception as e:
+                    last_error = e
+                    logger.warning(f"Ollama chat failed (attempt {attempt+1}/3): {e}")
+                    # Reinitialize client and backoff
+                    try:
+                        self.client = ollama.Client(host=self.base_url)
+                    except Exception:
+                        pass
+                
+            logger.error(f"Failed to generate AI response after retries: {last_error}")
+            return None
         
         except Exception as e:
             logger.error(f"Failed to generate AI response: {e}", exc_info=True)
             return None
-    
     def _format_context_data(self, context_data: Dict[str, Any]) -> str:
         """Format context data into readable text for AI"""
         
@@ -113,7 +128,7 @@ Always base your answers on the provided data. Don't make up information."""
                 title = task.get('title', 'Untitled')
                 status = task.get('status', 'unknown')
                 priority = task.get('priority', 'medium')
-                assignee = task.get('assignee', {}).get('name', 'Unassigned')
+                assignee = (task.get('assignee') or {}).get('name', 'Unassigned')
                 parts.append(f"  • [{priority}] {title} - {status} (Assigned: {assignee})")
         
         # User stats
@@ -131,6 +146,24 @@ Always base your answers on the provided data. Don't make up information."""
             parts.append(f"  • Total tasks: {stats.get('totalTasks', 0)}")
             parts.append(f"  • Completed: {stats.get('completedTasks', 0)}")
             parts.append(f"  • In progress: {stats.get('inProgressTasks', 0)}")
+        
+        # GitHub repo overview
+        if 'github_repos' in context_data and context_data['github_repos']:
+            parts.append("\n🐙 GITHUB REPOS:")
+            for repo in context_data['github_repos'][:3]:
+                parts.append(f"  • {repo.get('full_name')} ⭐{repo.get('stars', 0)} 🔱{repo.get('forks', 0)}")
+        
+        # GitHub recent PRs
+        if 'github_prs' in context_data and context_data['github_prs']:
+            parts.append("\n🔀 RECENT PRs:")
+            for pr in context_data['github_prs'][:5]:
+                parts.append(f"  • #{pr.get('number')} {pr.get('title')} by {pr.get('author')} [{pr.get('state')}]")
+        
+        # GitHub recent commits
+        if 'github_commits' in context_data and context_data['github_commits']:
+            parts.append("\n🧩 RECENT COMMITS:")
+            for c in context_data['github_commits'][:5]:
+                parts.append(f"  • {c.get('repo')} - {c.get('message')[:80]} ({c.get('author')})")
         
         return "\n".join(parts) if parts else "No specific data available."
     

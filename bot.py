@@ -65,17 +65,38 @@ api_service = APIService(API_BASE_URL)
 report_builder = ReportBuilder()
 scheduler = ReportScheduler(TIMEZONE)
 
+# Repo normalization for GitHub inputs
+def _normalize_repo_list(repos):
+    normalized = []
+    for r in (repos or []):
+        if not r:
+            continue
+        r = r.strip()
+        if r.startswith('http'):
+            try:
+                parts = r.split('github.com/')[-1].split('/')
+                if len(parts) >= 2:
+                    normalized.append(f"{parts[0]}/{parts[1]}")
+                else:
+                    normalized.append(r)
+            except Exception:
+                normalized.append(r)
+        else:
+            normalized.append(r)
+    return normalized
+
 # Initialize code review services
 user_mapping_service = UserMappingService(USER_MAPPING_FILE)
 github_pr_service = GitHubPRService(GITHUB_TOKEN)
-github_poll_service = GitHubPollService(github_pr_service, GITHUB_REPOS_TO_WATCH)
+normalized_repos = _normalize_repo_list(GITHUB_REPOS_TO_WATCH)
+github_poll_service = GitHubPollService(github_pr_service, normalized_repos)
 llm_service = LocalLLMService(OLLAMA_BASE_URL, OLLAMA_CODE_MODEL)
 code_review_builder = CodeReviewBuilder()
 
 # Initialize conversational AI services
 conversational_ai = ConversationalAIService(OLLAMA_BASE_URL, OLLAMA_MODEL)
 conversation_manager = ConversationManager(CONVERSATION_HISTORY_PATH, MAX_CONVERSATION_HISTORY)
-webapp_query = WebAppQueryService(api_service)
+webapp_query = WebAppQueryService(api_service, github_service=github_pr_service, repos_to_watch=normalized_repos)
 
 # Path to enabled projects file
 ENABLED_PROJECTS_FILE = os.path.join(os.path.dirname(__file__), 'enabled_projects.json')
@@ -149,7 +170,7 @@ async def on_ready():
     # Start GitHub polling for code reviews (MUCH SIMPLER!)
     if GITHUB_TOKEN and GITHUB_REPOS_TO_WATCH:
         bot.loop.create_task(poll_github_for_reviews())
-        logger.info(f"✅ GitHub polling started for repos: {', '.join(GITHUB_REPOS_TO_WATCH)}")
+        logger.info(f"✅ GitHub polling started for repos: {', '.join(normalized_repos)}")
         logger.info(f"   Checking every {CODE_REVIEW_CHECK_INTERVAL} seconds")
     else:
         logger.warning("⚠️ GitHub polling disabled (missing GITHUB_TOKEN or GITHUB_REPOS_TO_WATCH)")
@@ -210,12 +231,13 @@ async def handle_conversation(message):
             # First message? Send welcome
             if not history:
                 welcome = (
-                    "👋 Hi! I'm PM Bot, your AI project management assistant!\n\n"
-                    "You can ask me natural questions like:\n"
+                    "🪄 Yo! I'm your friendly PM gremlin.\n\n"
+                    "I snack on tasks, sip commits, and spit out status updates.\n\n"
+                    "Ask me stuff like:\n"
                     "• How's the mobile app going?\n"
                     "• What's John working on?\n"
                     "• Are we on track for Friday?\n\n"
-                    "What would you like to know?"
+                    "Hit me with your toughest question. I dare you. 😎"
                 )
                 await message.reply(welcome)
                 conversation_manager.add_message(user_id, 'assistant', welcome)
@@ -233,9 +255,11 @@ async def handle_conversation(message):
             )
             
             if not ai_response:
+                # Friendly fallback with suggestion
                 ai_response = (
-                    "😔 Sorry, I'm having trouble with the AI service right now. "
-                    "Please try again in a moment!"
+                    "🤖 My brain just hiccuped. Give me 5 seconds and try again!\n"
+                    "If this keeps happening, make sure Ollama is running (`ollama serve`) "
+                    "and the model is pulled (`ollama pull " + OLLAMA_MODEL + "`)."
                 )
             
             # Send response

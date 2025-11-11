@@ -1,5 +1,14 @@
 # Environment variables
 .env
+.env.*
+!.env.example
+
+# Sensitive data files
+user_mappings.json
+enabled_projects.json
+startup.log
+bot_output.log
+bot_error.log
 
 # Python
 __pycache__/
@@ -17,6 +26,7 @@ ENV/
 logs/
 
 # Conversation history (contains private chat data)
+data/
 data/conversation_history.json
 
 # IDE
