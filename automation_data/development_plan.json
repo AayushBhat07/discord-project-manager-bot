@@ -1,0 +1,415 @@
+{
+  "project_name": "Discord PM Bot - Feature Development",
+  "total_days": 15,
+  "commits_per_day": 3,
+  "current_day": 1,
+  "branch_name": "features-dev",
+  "last_commit_date": null,
+  "tasks": [
+    {
+      "id": "1.1",
+      "day": 1,
+      "feature": "Time Tracking",
+      "description": "Add time tracking service foundation",
+      "file": "services/time_tracking_service.py",
+      "status": "pending",
+      "commit_message": "feat(time-tracking): add time tracking service foundation"
+    },
+    {
+      "id": "1.2",
+      "day": 1,
+      "feature": "Time Tracking",
+      "description": "Add timer start/stop functionality",
+      "file": "services/time_tracking_service.py",
+      "status": "pending",
+      "commit_message": "feat(time-tracking): implement timer start and stop methods"
+    },
+    {
+      "id": "1.3",
+      "day": 1,
+      "feature": "Time Tracking",
+      "description": "Add time entry storage",
+      "file": "services/time_tracking_service.py",
+      "status": "pending",
+      "commit_message": "feat(time-tracking): add time entry persistence"
+    },
+    {
+      "id": "2.1",
+      "day": 2,
+      "feature": "Time Tracking",
+      "description": "Add Discord start timer command",
+      "file": "bot.py",
+      "status": "pending",
+      "commit_message": "feat(time-tracking): add !start-timer command"
+    },
+    {
+      "id": "2.2",
+      "day": 2,
+      "feature": "Time Tracking",
+      "description": "Add Discord stop timer command",
+      "file": "bot.py",
+      "status": "pending",
+      "commit_message": "feat(time-tracking): add !stop-timer command"
+    },
+    {
+      "id": "2.3",
+      "day": 2,
+      "feature": "Time Tracking",
+      "description": "Add manual time logging command",
+      "file": "bot.py",
+      "status": "pending",
+      "commit_message": "feat(time-tracking): add !log-time command"
+    },
+    {
+      "id": "3.1",
+      "day": 3,
+      "feature": "Time Tracking",
+      "description": "Add time report builder",
+      "file": "services/time_report_builder.py",
+      "status": "pending",
+      "commit_message": "feat(time-tracking): create time report builder service"
+    },
+    {
+      "id": "3.2",
+      "day": 3,
+      "feature": "Time Tracking",
+      "description": "Add user time statistics aggregation",
+      "file": "services/time_report_builder.py",
+      "status": "pending",
+      "commit_message": "feat(time-tracking): add user time statistics"
+    },
+    {
+      "id": "3.3",
+      "day": 3,
+      "feature": "Time Tracking",
+      "description": "Add weekly time report command",
+      "file": "bot.py",
+      "status": "pending",
+      "commit_message": "feat(time-tracking): add !time-report command"
+    },
+    {
+      "id": "4.1",
+      "day": 4,
+      "feature": "Time Tracking",
+      "description": "Add estimated vs actual time comparison",
+      "file": "services/time_report_builder.py",
+      "status": "pending",
+      "commit_message": "feat(time-tracking): add estimated vs actual comparison"
+    },
+    {
+      "id": "4.2",
+      "day": 4,
+      "feature": "Time Tracking",
+      "description": "Add project-wise time breakdown",
+      "file": "services/time_report_builder.py",
+      "status": "pending",
+      "commit_message": "feat(time-tracking): add project time breakdown"
+    },
+    {
+      "id": "4.3",
+      "day": 4,
+      "feature": "Time Tracking",
+      "description": "Add time tracking embed formatting",
+      "file": "services/time_report_builder.py",
+      "status": "pending",
+      "commit_message": "feat(time-tracking): enhance report embeds with charts"
+    },
+    {
+      "id": "5.1",
+      "day": 5,
+      "feature": "Time Tracking",
+      "description": "Add active timers display",
+      "file": "bot.py",
+      "status": "pending",
+      "commit_message": "feat(time-tracking): add !active-timers command"
+    },
+    {
+      "id": "5.2",
+      "day": 5,
+      "feature": "Time Tracking",
+      "description": "Add time entry editing",
+      "file": "services/time_tracking_service.py",
+      "status": "pending",
+      "commit_message": "feat(time-tracking): add time entry edit functionality"
+    },
+    {
+      "id": "5.3",
+      "day": 5,
+      "feature": "Time Tracking",
+      "description": "Add time tracking error handling",
+      "file": "services/time_tracking_service.py",
+      "status": "pending",
+      "commit_message": "fix(time-tracking): add comprehensive error handling"
+    },
+    {
+      "id": "6.1",
+      "day": 6,
+      "feature": "Health Score",
+      "description": "Add health score calculator service",
+      "file": "services/health_score_service.py",
+      "status": "pending",
+      "commit_message": "feat(health-score): create health score calculator"
+    },
+    {
+      "id": "6.2",
+      "day": 6,
+      "feature": "Health Score",
+      "description": "Add completion rate metric",
+      "file": "services/health_score_service.py",
+      "status": "pending",
+      "commit_message": "feat(health-score): implement completion rate calculation"
+    },
+    {
+      "id": "6.3",
+      "day": 6,
+      "feature": "Health Score",
+      "description": "Add overdue tasks penalty",
+      "file": "services/health_score_service.py",
+      "status": "pending",
+      "commit_message": "feat(health-score): add overdue tasks scoring penalty"
+    },
+    {
+      "id": "7.1",
+      "day": 7,
+      "feature": "Health Score",
+      "description": "Add team activity metric",
+      "file": "services/health_score_service.py",
+      "status": "pending",
+      "commit_message": "feat(health-score): add team activity scoring"
+    },
+    {
+      "id": "7.2",
+      "day": 7,
+      "feature": "Health Score",
+      "description": "Add risk identification logic",
+      "file": "services/health_score_service.py",
+      "status": "pending",
+      "commit_message": "feat(health-score): implement risk level detection"
+    },
+    {
+      "id": "7.3",
+      "day": 7,
+      "feature": "Health Score",
+      "description": "Add bottleneck detection",
+      "file": "services/health_score_service.py",
+      "status": "pending",
+      "commit_message": "feat(health-score): add bottleneck identification"
+    },
+    {
+      "id": "8.1",
+      "day": 8,
+      "feature": "Health Score",
+      "description": "Add health report builder",
+      "file": "services/health_report_builder.py",
+      "status": "pending",
+      "commit_message": "feat(health-score): create health report builder"
+    },
+    {
+      "id": "8.2",
+      "day": 8,
+      "feature": "Health Score",
+      "description": "Add weekly health report scheduling",
+      "file": "bot.py",
+      "status": "pending",
+      "commit_message": "feat(health-score): add weekly automated health reports"
+    },
+    {
+      "id": "8.3",
+      "day": 8,
+      "feature": "Health Score",
+      "description": "Add health score command",
+      "file": "bot.py",
+      "status": "pending",
+      "commit_message": "feat(health-score): add !health-score command"
+    },
+    {
+      "id": "9.1",
+      "day": 9,
+      "feature": "Health Score",
+      "description": "Add health trend tracking",
+      "file": "services/health_score_service.py",
+      "status": "pending",
+      "commit_message": "feat(health-score): add historical trend tracking"
+    },
+    {
+      "id": "9.2",
+      "day": 9,
+      "feature": "Health Score",
+      "description": "Add health score visualization",
+      "file": "services/health_report_builder.py",
+      "status": "pending",
+      "commit_message": "feat(health-score): add visual health indicators"
+    },
+    {
+      "id": "9.3",
+      "day": 9,
+      "feature": "Health Score",
+      "description": "Add DM health alerts",
+      "file": "bot.py",
+      "status": "pending",
+      "commit_message": "feat(health-score): send DM alerts for critical health"
+    },
+    {
+      "id": "10.1",
+      "day": 10,
+      "feature": "Health Score",
+      "description": "Add team velocity metric",
+      "file": "services/health_score_service.py",
+      "status": "pending",
+      "commit_message": "feat(health-score): add team velocity calculation"
+    },
+    {
+      "id": "10.2",
+      "day": 10,
+      "feature": "Health Score",
+      "description": "Add health dashboard improvements",
+      "file": "services/health_report_builder.py",
+      "status": "pending",
+      "commit_message": "feat(health-score): enhance dashboard with metrics"
+    },
+    {
+      "id": "10.3",
+      "day": 10,
+      "feature": "Health Score",
+      "description": "Add health score caching",
+      "file": "services/health_score_service.py",
+      "status": "pending",
+      "commit_message": "feat(health-score): add score caching for performance"
+    },
+    {
+      "id": "11.1",
+      "day": 11,
+      "feature": "Reminders",
+      "description": "Add deadline reminder service",
+      "file": "services/deadline_reminder_service.py",
+      "status": "pending",
+      "commit_message": "feat(reminders): create deadline reminder service"
+    },
+    {
+      "id": "11.2",
+      "day": 11,
+      "feature": "Reminders",
+      "description": "Add daily deadline check scheduler",
+      "file": "services/deadline_reminder_service.py",
+      "status": "pending",
+      "commit_message": "feat(reminders): add daily deadline checker"
+    },
+    {
+      "id": "11.3",
+      "day": 11,
+      "feature": "Reminders",
+      "description": "Add DM notification system",
+      "file": "services/deadline_reminder_service.py",
+      "status": "pending",
+      "commit_message": "feat(reminders): implement DM notification delivery"
+    },
+    {
+      "id": "12.1",
+      "day": 12,
+      "feature": "Reminders",
+      "description": "Add tasks due today detection",
+      "file": "services/deadline_reminder_service.py",
+      "status": "pending",
+      "commit_message": "feat(reminders): add today's deadline detection"
+    },
+    {
+      "id": "12.2",
+      "day": 12,
+      "feature": "Reminders",
+      "description": "Add tasks due tomorrow detection",
+      "file": "services/deadline_reminder_service.py",
+      "status": "pending",
+      "commit_message": "feat(reminders): add tomorrow's deadline detection"
+    },
+    {
+      "id": "12.3",
+      "day": 12,
+      "feature": "Reminders",
+      "description": "Add overdue task escalation",
+      "file": "services/deadline_reminder_service.py",
+      "status": "pending",
+      "commit_message": "feat(reminders): add overdue task escalation"
+    },
+    {
+      "id": "13.1",
+      "day": 13,
+      "feature": "Reminders",
+      "description": "Add user reminder preferences",
+      "file": "services/reminder_preferences_service.py",
+      "status": "pending",
+      "commit_message": "feat(reminders): create user preferences service"
+    },
+    {
+      "id": "13.2",
+      "day": 13,
+      "feature": "Reminders",
+      "description": "Add !remind-me command",
+      "file": "bot.py",
+      "status": "pending",
+      "commit_message": "feat(reminders): add !remind-me preferences command"
+    },
+    {
+      "id": "13.3",
+      "day": 13,
+      "feature": "Reminders",
+      "description": "Add custom reminder times",
+      "file": "services/reminder_preferences_service.py",
+      "status": "pending",
+      "commit_message": "feat(reminders): add custom reminder time settings"
+    },
+    {
+      "id": "14.1",
+      "day": 14,
+      "feature": "Reminders",
+      "description": "Add snooze functionality",
+      "file": "bot.py",
+      "status": "pending",
+      "commit_message": "feat(reminders): add reminder snooze feature"
+    },
+    {
+      "id": "14.2",
+      "day": 14,
+      "feature": "Reminders",
+      "description": "Add batch reminder grouping",
+      "file": "services/deadline_reminder_service.py",
+      "status": "pending",
+      "commit_message": "feat(reminders): group multiple reminders in batches"
+    },
+    {
+      "id": "14.3",
+      "day": 14,
+      "feature": "Reminders",
+      "description": "Add reminder statistics",
+      "file": "services/deadline_reminder_service.py",
+      "status": "pending",
+      "commit_message": "feat(reminders): add reminder delivery statistics"
+    },
+    {
+      "id": "15.1",
+      "day": 15,
+      "feature": "Integration",
+      "description": "Integrate all features with main bot",
+      "file": "bot.py",
+      "status": "pending",
+      "commit_message": "feat(integration): integrate time tracking with health score"
+    },
+    {
+      "id": "15.2",
+      "day": 15,
+      "feature": "Integration",
+      "description": "Add comprehensive testing",
+      "file": "test_features.py",
+      "status": "pending",
+      "commit_message": "test: add comprehensive feature tests"
+    },
+    {
+      "id": "15.3",
+      "day": 15,
+      "feature": "Integration",
+      "description": "Update documentation and help commands",
+      "file": "bot.py",
+      "status": "pending",
+      "commit_message": "docs: update help commands with new features"
+    }
+  ]
+}

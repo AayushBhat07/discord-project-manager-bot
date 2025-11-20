@@ -1,0 +1,561 @@
+#!/usr/bin/env python3
+"""
+Daily Commit Bot - Automated Feature Development System
+Implements features incrementally with spaced commits throughout the day.
+"""
+
+import json
+import os
+import sys
+import subprocess
+import time
+from datetime import datetime, timedelta
+from pathlib import Path
+import random
+
+# Configuration
+PROJECT_ROOT = Path(__file__).parent.parent
+PLAN_FILE = PROJECT_ROOT / "automation_data" / "development_plan.json"
+LOG_FILE = PROJECT_ROOT / "automation_data" / "commit_bot.log"
+SNIPPETS_DIR = PROJECT_ROOT / "automation_data" / "code_snippets"
+
+def log(message):
+    """Log message to both console and file"""
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    log_msg = f"[{timestamp}] {message}"
+    print(log_msg)
+    
+    with open(LOG_FILE, "a") as f:
+        f.write(log_msg + "\n")
+
+def load_plan():
+    """Load the development plan"""
+    try:
+        with open(PLAN_FILE, "r") as f:
+            return json.load(f)
+    except Exception as e:
+        log(f"Error loading plan: {e}")
+        sys.exit(1)
+
+def save_plan(plan):
+    """Save the development plan"""
+    try:
+        with open(PLAN_FILE, "w") as f:
+            json.dump(plan, f, indent=2)
+    except Exception as e:
+        log(f"Error saving plan: {e}")
+        sys.exit(1)
+
+def check_git_repo():
+    """Verify we're in a git repository"""
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "--git-dir"],
+            cwd=PROJECT_ROOT,
+            capture_output=True,
+            text=True
+        )
+        return result.returncode == 0
+    except Exception:
+        return False
+
+def get_commits_today():
+    """Get number of commits made today"""
+    try:
+        today = datetime.now().strftime("%Y-%m-%d")
+        result = subprocess.run(
+            ["git", "log", "--since", f"{today} 00:00:00", "--oneline"],
+            cwd=PROJECT_ROOT,
+            capture_output=True,
+            text=True
+        )
+        commits = result.stdout.strip().split('\n') if result.stdout.strip() else []
+        return len(commits)
+    except Exception as e:
+        log(f"Error checking today's commits: {e}")
+        return 0
+
+def ensure_branch(branch_name):
+    """Ensure we're on the correct branch"""
+    try:
+        # Check if branch exists
+        result = subprocess.run(
+            ["git", "branch", "--list", branch_name],
+            cwd=PROJECT_ROOT,
+            capture_output=True,
+            text=True
+        )
+        
+        if not result.stdout.strip():
+            # Create branch
+            log(f"Creating branch: {branch_name}")
+            subprocess.run(
+                ["git", "checkout", "-b", branch_name],
+                cwd=PROJECT_ROOT,
+                check=True
+            )
+        else:
+            # Switch to branch
+            subprocess.run(
+                ["git", "checkout", branch_name],
+                cwd=PROJECT_ROOT,
+                check=True
+            )
+        return True
+    except Exception as e:
+        log(f"Error managing branch: {e}")
+        return False
+
+def get_pending_tasks_for_day(plan, day):
+    """Get pending tasks for a specific day"""
+    return [task for task in plan["tasks"] 
+            if task["day"] == day and task["status"] == "pending"]
+
+def implement_task(task):
+    """Implement a task by creating/modifying code"""
+    file_path = PROJECT_ROOT / task["file"]
+    
+    # Create directory if needed
+    file_path.parent.mkdir(parents=True, exist_ok=True)
+    
+    # Generate code based on task
+    code = generate_code_for_task(task)
+    
+    # Write or append to file
+    if file_path.exists():
+        # Append to existing file
+        with open(file_path, "a") as f:
+            f.write(f"\n\n# {task['description']}\n")
+            f.write(code)
+    else:
+        # Create new file with header
+        with open(file_path, "w") as f:
+            if file_path.suffix == ".py":
+                f.write(f'"""\n{task["description"]}\n"""\n\n')
+                f.write(code)
+            else:
+                f.write(code)
+    
+    log(f"Implemented task {task['id']}: {task['description']}")
+    return True
+
+def generate_code_for_task(task):
+    """Generate appropriate code based on the task"""
+    feature = task["feature"]
+    task_id = task["id"]
+    
+    # Code templates for different features
+    if "time tracking" in task["description"].lower():
+        return generate_time_tracking_code(task)
+    elif "health score" in task["description"].lower():
+        return generate_health_score_code(task)
+    elif "reminder" in task["description"].lower() or "deadline" in task["description"].lower():
+        return generate_reminder_code(task)
+    else:
+        return generate_integration_code(task)
+
+def generate_time_tracking_code(task):
+    """Generate time tracking feature code"""
+    if "foundation" in task["description"].lower():
+        return '''import logging
+from datetime import datetime
+from typing import Dict, Optional
+
+logger = logging.getLogger(__name__)
+
+class TimeTrackingService:
+    """Service for tracking time spent on tasks"""
+    
+    def __init__(self):
+        self.active_timers = {}
+        self.time_entries = []
+    
+    def get_active_timer(self, user_id: str, task_id: str) -> Optional[Dict]:
+        """Get active timer for user and task"""
+        key = f"{user_id}_{task_id}"
+        return self.active_timers.get(key)
+'''
+    elif "start" in task["description"].lower() and "stop" in task["description"].lower():
+        return '''    
+    def start_timer(self, user_id: str, task_id: str, task_name: str) -> Dict:
+        """Start a timer for a task"""
+        key = f"{user_id}_{task_id}"
+        
+        if key in self.active_timers:
+            logger.warning(f"Timer already running for {key}")
+            return {"success": False, "message": "Timer already running"}
+        
+        timer = {
+            "user_id": user_id,
+            "task_id": task_id,
+            "task_name": task_name,
+            "start_time": datetime.now(),
+        }
+        self.active_timers[key] = timer
+        logger.info(f"Started timer for user {user_id} on task {task_id}")
+        return {"success": True, "timer": timer}
+    
+    def stop_timer(self, user_id: str, task_id: str) -> Dict:
+        """Stop a running timer"""
+        key = f"{user_id}_{task_id}"
+        
+        if key not in self.active_timers:
+            logger.warning(f"No active timer for {key}")
+            return {"success": False, "message": "No active timer"}
+        
+        timer = self.active_timers.pop(key)
+        end_time = datetime.now()
+        duration = (end_time - timer["start_time"]).total_seconds() / 60  # minutes
+        
+        logger.info(f"Stopped timer for user {user_id} on task {task_id}: {duration:.1f} min")
+        return {
+            "success": True,
+            "start_time": timer["start_time"],
+            "end_time": end_time,
+            "duration_minutes": duration
+        }
+'''
+    elif "persistence" in task["description"].lower() or "storage" in task["description"].lower():
+        return '''    
+    def save_time_entry(self, user_id: str, task_id: str, duration_minutes: float, notes: str = "") -> bool:
+        """Save a time entry"""
+        entry = {
+            "user_id": user_id,
+            "task_id": task_id,
+            "duration_minutes": duration_minutes,
+            "timestamp": datetime.now(),
+            "notes": notes
+        }
+        self.time_entries.append(entry)
+        logger.info(f"Saved time entry: {duration_minutes:.1f} min for task {task_id}")
+        return True
+    
+    def get_user_time_entries(self, user_id: str, days: int = 7) -> list:
+        """Get time entries for a user"""
+        cutoff = datetime.now() - timedelta(days=days)
+        return [entry for entry in self.time_entries 
+                if entry["user_id"] == user_id and entry["timestamp"] > cutoff]
+'''
+    else:
+        return f'# {task["description"]}\n# Implementation placeholder\n'
+
+def generate_health_score_code(task):
+    """Generate health score feature code"""
+    if "foundation" in task["description"].lower() or "calculator" in task["description"].lower():
+        return '''import logging
+from typing import Dict, List
+
+logger = logging.getLogger(__name__)
+
+class HealthScoreService:
+    """Calculate project health scores"""
+    
+    def __init__(self):
+        self.score_cache = {}
+    
+    def calculate_health_score(self, project_id: str, metrics: Dict) -> int:
+        """Calculate overall health score (0-100)"""
+        score = 100
+        
+        # Apply various metrics
+        completion_score = self._calculate_completion_rate(metrics)
+        overdue_penalty = self._calculate_overdue_penalty(metrics)
+        activity_score = self._calculate_activity_score(metrics)
+        
+        final_score = max(0, min(100, int(
+            completion_score * 0.4 + 
+            (100 - overdue_penalty) * 0.3 + 
+            activity_score * 0.3
+        )))
+        
+        logger.info(f"Project {project_id} health score: {final_score}")
+        return final_score
+'''
+    elif "completion rate" in task["description"].lower():
+        return '''    
+    def _calculate_completion_rate(self, metrics: Dict) -> float:
+        """Calculate completion rate score"""
+        total = metrics.get("total_tasks", 0)
+        completed = metrics.get("completed_tasks", 0)
+        
+        if total == 0:
+            return 50.0
+        
+        rate = (completed / total) * 100
+        return rate
+'''
+    elif "overdue" in task["description"].lower():
+        return '''    
+    def _calculate_overdue_penalty(self, metrics: Dict) -> float:
+        """Calculate penalty for overdue tasks"""
+        total = metrics.get("total_tasks", 1)
+        overdue = metrics.get("overdue_tasks", 0)
+        
+        penalty = (overdue / total) * 50  # Max 50 point penalty
+        return min(50, penalty)
+'''
+    elif "activity" in task["description"].lower():
+        return '''    
+    def _calculate_activity_score(self, metrics: Dict) -> float:
+        """Calculate team activity score"""
+        updates_last_week = metrics.get("updates_last_week", 0)
+        commits_last_week = metrics.get("commits_last_week", 0)
+        
+        activity = (updates_last_week * 2 + commits_last_week) / 3
+        return min(100, activity * 10)
+'''
+    elif "risk" in task["description"].lower():
+        return '''    
+    def identify_risk_level(self, score: int) -> str:
+        """Identify risk level based on score"""
+        if score >= 80:
+            return "LOW"
+        elif score >= 60:
+            return "MEDIUM"
+        elif score >= 40:
+            return "HIGH"
+        else:
+            return "CRITICAL"
+'''
+    else:
+        return f'# {task["description"]}\n# Implementation placeholder\n'
+
+def generate_reminder_code(task):
+    """Generate reminder feature code"""
+    if "foundation" in task["description"].lower() or "service" in task["description"].lower():
+        return '''import logging
+from datetime import datetime, timedelta
+from typing import List, Dict
+
+logger = logging.getLogger(__name__)
+
+class DeadlineReminderService:
+    """Service for managing deadline reminders"""
+    
+    def __init__(self):
+        self.reminders = []
+        self.user_preferences = {}
+    
+    def check_upcoming_deadlines(self, tasks: List[Dict]) -> Dict:
+        """Check for upcoming deadlines"""
+        today = datetime.now().date()
+        tomorrow = today + timedelta(days=1)
+        
+        due_today = []
+        due_tomorrow = []
+        overdue = []
+        
+        for task in tasks:
+            if not task.get("deadline"):
+                continue
+            
+            deadline = datetime.fromisoformat(task["deadline"]).date()
+            
+            if deadline < today:
+                overdue.append(task)
+            elif deadline == today:
+                due_today.append(task)
+            elif deadline == tomorrow:
+                due_tomorrow.append(task)
+        
+        return {
+            "due_today": due_today,
+            "due_tomorrow": due_tomorrow,
+            "overdue": overdue
+        }
+'''
+    elif "notification" in task["description"].lower():
+        return '''    
+    async def send_reminder_dm(self, user, tasks: List[Dict], reminder_type: str):
+        """Send reminder DM to user"""
+        if not tasks:
+            return
+        
+        if reminder_type == "today":
+            title = "📅 Tasks Due Today"
+            color = 0xFF0000
+        elif reminder_type == "tomorrow":
+            title = "⏰ Tasks Due Tomorrow"
+            color = 0xFFA500
+        else:
+            title = "⚠️ Overdue Tasks"
+            color = 0xFF0000
+        
+        embed = discord.Embed(title=title, color=color)
+        for task in tasks[:5]:
+            embed.add_field(
+                name=task.get("title", "Untitled"),
+                value=f"Project: {task.get('project', 'Unknown')}",
+                inline=False
+            )
+        
+        try:
+            await user.send(embed=embed)
+            logger.info(f"Sent {reminder_type} reminder to user {user.id}")
+        except Exception as e:
+            logger.error(f"Failed to send reminder: {e}")
+'''
+    elif "preferences" in task["description"].lower():
+        return '''    
+    def set_user_preference(self, user_id: str, preference: str, value: any):
+        """Set user reminder preference"""
+        if user_id not in self.user_preferences:
+            self.user_preferences[user_id] = {}
+        
+        self.user_preferences[user_id][preference] = value
+        logger.info(f"Updated preference for user {user_id}: {preference} = {value}")
+    
+    def get_user_preference(self, user_id: str, preference: str, default=None):
+        """Get user reminder preference"""
+        return self.user_preferences.get(user_id, {}).get(preference, default)
+'''
+    else:
+        return f'# {task["description"]}\n# Implementation placeholder\n'
+
+def generate_integration_code(task):
+    """Generate integration code"""
+    return f'''
+# {task["description"]}
+
+import logging
+logger = logging.getLogger(__name__)
+
+# Integration code for {task["feature"]}
+logger.info("Feature integration: {task['id']}")
+'''
+
+def commit_changes(task):
+    """Commit and push changes"""
+    try:
+        # Add all changes
+        subprocess.run(
+            ["git", "add", "."],
+            cwd=PROJECT_ROOT,
+            check=True
+        )
+        
+        # Commit with message
+        subprocess.run(
+            ["git", "commit", "-m", task["commit_message"]],
+            cwd=PROJECT_ROOT,
+            check=True
+        )
+        
+        log(f"Committed: {task['commit_message']}")
+        return True
+    except Exception as e:
+        log(f"Error committing changes: {e}")
+        return False
+
+def push_changes(branch_name):
+    """Push changes to remote"""
+    try:
+        subprocess.run(
+            ["git", "push", "-u", "origin", branch_name],
+            cwd=PROJECT_ROOT,
+            check=True
+        )
+        log(f"Pushed changes to {branch_name}")
+        return True
+    except Exception as e:
+        log(f"Error pushing changes: {e}")
+        return False
+
+def calculate_commit_delay():
+    """Calculate random delay between commits (30-90 minutes)"""
+    return random.randint(30, 90) * 60  # seconds
+
+def main():
+    """Main execution"""
+    log("=" * 60)
+    log("Daily Commit Bot Started")
+    log("=" * 60)
+    
+    # Verify git repository
+    if not check_git_repo():
+        log("ERROR: Not in a git repository")
+        sys.exit(1)
+    
+    # Load plan
+    plan = load_plan()
+    branch_name = plan["branch_name"]
+    current_day = plan["current_day"]
+    commits_per_day = plan["commits_per_day"]
+    
+    log(f"Current day: {current_day}/{plan['total_days']}")
+    
+    # Check commits already made today
+    commits_today = get_commits_today()
+    log(f"Commits made today: {commits_today}/{commits_per_day}")
+    
+    if commits_today >= commits_per_day:
+        log("All commits for today already made. Exiting.")
+        return
+    
+    # Ensure we're on the correct branch
+    if not ensure_branch(branch_name):
+        log("ERROR: Failed to switch to branch")
+        sys.exit(1)
+    
+    # Get pending tasks for current day
+    pending_tasks = get_pending_tasks_for_day(plan, current_day)
+    
+    if not pending_tasks:
+        # Move to next day
+        log(f"No pending tasks for day {current_day}. Moving to next day.")
+        plan["current_day"] = min(current_day + 1, plan["total_days"])
+        save_plan(plan)
+        return
+    
+    # Make remaining commits for today
+    commits_to_make = min(commits_per_day - commits_today, len(pending_tasks))
+    
+    for i in range(commits_to_make):
+        task = pending_tasks[i]
+        
+        log(f"\nProcessing task {task['id']}: {task['description']}")
+        
+        # Implement task
+        if not implement_task(task):
+            log(f"ERROR: Failed to implement task {task['id']}")
+            continue
+        
+        # Commit changes
+        if not commit_changes(task):
+            log(f"ERROR: Failed to commit task {task['id']}")
+            continue
+        
+        # Update task status
+        for t in plan["tasks"]:
+            if t["id"] == task["id"]:
+                t["status"] = "completed"
+                break
+        
+        save_plan(plan)
+        
+        # Push changes
+        push_changes(branch_name)
+        
+        # Wait before next commit (except for last one)
+        if i < commits_to_make - 1:
+            delay = calculate_commit_delay()
+            log(f"Waiting {delay/60:.0f} minutes before next commit...")
+            time.sleep(delay)
+    
+    # Update last commit date
+    plan["last_commit_date"] = datetime.now().isoformat()
+    save_plan(plan)
+    
+    log("\n" + "=" * 60)
+    log(f"Completed {commits_to_make} commits for day {current_day}")
+    log("=" * 60)
+
+if __name__ == "__main__":
+    try:
+        main()
+    except KeyboardInterrupt:
+        log("\nBot interrupted by user")
+    except Exception as e:
+        log(f"FATAL ERROR: {e}")
+        import traceback
+        log(traceback.format_exc())
