@@ -15,6 +15,10 @@ import random
 import discord
 import asyncio
 from discord import Embed
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 # Configuration
 PROJECT_ROOT = Path(__file__).parent.parent
@@ -478,6 +482,117 @@ def push_changes(branch_name):
         log(f"Error pushing changes: {e}")
         return False
 
+def merge_to_main(branch_name):
+    """Merge feature branch to main and push"""
+    try:
+        log(f"\n{'='*60}")
+        log("Starting merge to main branch...")
+        log(f"{'='*60}")
+        
+        # Stash any uncommitted changes
+        subprocess.run(
+            ["git", "stash"],
+            cwd=PROJECT_ROOT,
+            capture_output=True
+        )
+        
+        # Switch to main branch
+        log("Switching to main branch...")
+        result = subprocess.run(
+            ["git", "checkout", "main"],
+            cwd=PROJECT_ROOT,
+            capture_output=True,
+            text=True
+        )
+        
+        if result.returncode != 0:
+            log(f"Warning: Could not switch to main, trying master...")
+            result = subprocess.run(
+                ["git", "checkout", "master"],
+                cwd=PROJECT_ROOT,
+                capture_output=True,
+                text=True
+            )
+            main_branch = "master" if result.returncode == 0 else None
+        else:
+            main_branch = "main"
+        
+        if not main_branch:
+            log("ERROR: Could not find main or master branch")
+            return False
+        
+        log(f"✓ Switched to {main_branch}")
+        
+        # Pull latest changes
+        log("Pulling latest changes...")
+        subprocess.run(
+            ["git", "pull", "origin", main_branch],
+            cwd=PROJECT_ROOT,
+            capture_output=True
+        )
+        
+        # Merge feature branch
+        log(f"Merging {branch_name} into {main_branch}...")
+        result = subprocess.run(
+            ["git", "merge", branch_name, "-m", f"Merge {branch_name}: Daily feature commits"],
+            cwd=PROJECT_ROOT,
+            capture_output=True,
+            text=True
+        )
+        
+        if result.returncode != 0:
+            log(f"ERROR: Merge failed: {result.stderr}")
+            # Switch back to feature branch
+            subprocess.run(["git", "checkout", branch_name], cwd=PROJECT_ROOT)
+            return False
+        
+        log(f"✓ Successfully merged {branch_name} into {main_branch}")
+        
+        # Push merged changes to main
+        log(f"Pushing merged commits to {main_branch}...")
+        result = subprocess.run(
+            ["git", "push", "origin", main_branch],
+            cwd=PROJECT_ROOT,
+            capture_output=True,
+            text=True
+        )
+        
+        if result.returncode != 0:
+            log(f"ERROR: Push to {main_branch} failed: {result.stderr}")
+            subprocess.run(["git", "checkout", branch_name], cwd=PROJECT_ROOT)
+            return False
+        
+        log(f"✓ Successfully pushed to {main_branch}")
+        
+        # Switch back to feature branch
+        log(f"Switching back to {branch_name}...")
+        subprocess.run(
+            ["git", "checkout", branch_name],
+            cwd=PROJECT_ROOT,
+            check=True
+        )
+        
+        log(f"✓ Returned to {branch_name}")
+        log(f"\n{'='*60}")
+        log("✅ Merge to main completed successfully!")
+        log("📊 Commits will now appear in GitHub contribution graph!")
+        log(f"{'='*60}\n")
+        
+        return True
+        
+    except Exception as e:
+        log(f"ERROR during merge: {e}")
+        # Try to return to feature branch
+        try:
+            subprocess.run(
+                ["git", "checkout", branch_name],
+                cwd=PROJECT_ROOT,
+                capture_output=True
+            )
+        except:
+            pass
+        return False
+
 def calculate_commit_delay():
     """Calculate random delay between commits (30-90 minutes)"""
     return random.randint(30, 90) * 60  # seconds
@@ -710,6 +825,13 @@ def main():
     log("\n" + "=" * 60)
     log(f"Completed {commits_to_make} commits for day {current_day}")
     log("=" * 60)
+    
+    # Merge to main after completing daily commits
+    log("\nMerging commits to main branch for GitHub contributions...")
+    if merge_to_main(branch_name):
+        log("✅ Daily commits successfully merged to main!")
+    else:
+        log("⚠ Warning: Could not merge to main. You may need to merge manually.")
 
 if __name__ == "__main__":
     try:
