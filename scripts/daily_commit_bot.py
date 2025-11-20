@@ -24,7 +24,7 @@ SNIPPETS_DIR = PROJECT_ROOT / "automation_data" / "code_snippets"
 
 # Discord Notification Configuration
 DISCORD_TOKEN = os.getenv('DISCORD_BOT_TOKEN', '')
-NOTIFICATION_USER_ID = 1437452710369562674
+NOTIFICATION_USER_ID = 690415992362500106
 
 def log(message):
     """Log message to both console and file"""
