@@ -7,11 +7,24 @@ SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 PLIST_FILE="$HOME/Library/LaunchAgents/com.discord.autocommit.plist"
 PYTHON_SCRIPT="$PROJECT_ROOT/scripts/daily_commit_bot.py"
+VENV_PYTHON="$PROJECT_ROOT/venv/bin/python3"
 
 echo "================================================"
 echo "Discord Bot Auto-Commit Setup"
 echo "================================================"
 echo ""
+
+# Check if virtual environment exists
+if [ ! -f "$VENV_PYTHON" ]; then
+    echo "❌ ERROR: Virtual environment not found at $VENV_PYTHON"
+    echo "Please create a virtual environment first:"
+    echo "  python3 -m venv venv"
+    echo "  source venv/bin/activate"
+    echo "  pip install -r requirements.txt"
+    exit 1
+fi
+
+echo "✓ Using Python: $VENV_PYTHON"
 
 # Make commit bot executable
 chmod +x "$PYTHON_SCRIPT"
@@ -28,7 +41,7 @@ cat > "$PLIST_FILE" << EOF
     
     <key>ProgramArguments</key>
     <array>
-        <string>/usr/bin/python3</string>
+        <string>$VENV_PYTHON</string>
         <string>$PYTHON_SCRIPT</string>
     </array>
     
