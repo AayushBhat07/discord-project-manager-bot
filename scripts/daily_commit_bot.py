@@ -796,6 +796,10 @@ def main():
         # Push changes
         push_changes(branch_name)
         
+        # Wait 5 minutes before sending Discord notification
+        log("Waiting 5 minutes before sending Discord notification...")
+        time.sleep(300)  # 5 minutes = 300 seconds
+        
         # Send Discord notification
         commit_info = {
             'task_id': task['id'],
