@@ -166,9 +166,9 @@ async def on_ready():
     bot.loop.create_task(rotate_status())
     logger.info("Status rotation started")
     
-    # Schedule automated reports
-    scheduler.schedule_reports(send_scheduled_reports, REPORT_HOURS)
-    scheduler.start()
+    # Schedule automated reports - DISABLED
+    # scheduler.schedule_reports(send_scheduled_reports, REPORT_HOURS)
+    # scheduler.start()
     
     # Start GitHub polling for code reviews (MUCH SIMPLER!)
     if GITHUB_TOKEN and GITHUB_REPOS_TO_WATCH:
@@ -184,7 +184,7 @@ async def on_ready():
     else:
         logger.warning(f"⚠️ Could not connect to Ollama at {OLLAMA_BASE_URL}")
     
-    logger.info(f"Bot is ready! Next report in: {scheduler.get_next_run_time()}")
+    logger.info(f"Bot is ready!")
 
 
 @bot.event
