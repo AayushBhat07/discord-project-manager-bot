@@ -31,6 +31,8 @@ from services.code_review_builder import CodeReviewBuilder
 from services.conversational_ai_service import ConversationalAIService
 from services.conversation_manager import ConversationManager
 from services.webapp_query_service import WebAppQueryService
+from services.webapp_query_service import WebAppQueryService
+from services.project_manager_service import ProjectManagerService
 from utils.scheduler import ReportScheduler
 
 # Configure logging
@@ -97,6 +99,7 @@ code_review_builder = CodeReviewBuilder()
 conversational_ai = ConversationalAIService(OLLAMA_BASE_URL, OLLAMA_MODEL)
 conversation_manager = ConversationManager(CONVERSATION_HISTORY_PATH, MAX_CONVERSATION_HISTORY)
 webapp_query = WebAppQueryService(api_service, github_service=github_pr_service, repos_to_watch=normalized_repos)
+project_manager = ProjectManagerService()
 
 # Path to enabled projects file
 ENABLED_PROJECTS_FILE = os.path.join(os.path.dirname(__file__), 'enabled_projects.json')
@@ -304,7 +307,11 @@ async def send_scheduled_reports():
     """Send automated reports to Discord channel (only for enabled projects)"""
     logger.info("Starting scheduled report generation")
     
-    channel = bot.get_channel(REPORT_CHANNEL_ID)
+    # Check for configured channel ID first
+    configured_channel_id = project_manager.get_config('report_channel_id')
+    channel_id = int(configured_channel_id) if configured_channel_id else REPORT_CHANNEL_ID
+    
+    channel = bot.get_channel(channel_id)
     if not channel:
         logger.error(f"Report channel {REPORT_CHANNEL_ID} not found")
         return
@@ -793,11 +800,179 @@ async def enable_reports(ctx, *, project_name: str):
         enabled.append(project_id)
         save_enabled_projects(enabled)
         
+        
         embed = discord.Embed(
             title="✅ Reports Enabled",
             description=f"Scheduled reports are now **enabled** for:\n📊 **{project.get('name')}**",
             color=0x00FF00
         )
+        await ctx.send(embed=embed)
+        logger.info(f"Enabled reports for {project.get('name')} by {ctx.author}")
+        
+    except Exception as e:
+        logger.error(f"Enable command failed: {e}", exc_info=True)
+        await ctx.send(f"❌ Failed to enable reports: {str(e)}")
+
+
+# --- Local Project Management Commands ---
+
+@bot.command(name='p_create')
+async def create_local_project(ctx, name: str, *, description: str = ""):
+    """Create a new local project"""
+    try:
+        project = project_manager.create_project(name, description)
+        await ctx.send(f"✅ Project **{project['name']}** created successfully!")
+        logger.info(f"Local project created: {name} by {ctx.author}")
+    except Exception as e:
+        logger.error(f"Failed to create local project: {e}", exc_info=True)
+        await ctx.send(f"❌ Failed to create project: {str(e)}")
+
+
+@bot.command(name='p_list')
+async def list_local_projects(ctx):
+    """List all local projects"""
+    try:
+        projects = project_manager.get_projects()
+        if not projects:
+            await ctx.send("📝 No local projects found. Create one with `!p_create <name>`")
+            return
+
+        embed = discord.Embed(
+            title="📂 Local Projects",
+            color=0x0099FF
+        )
+        
+        for p in projects:
+            task_count = len(p.get('tasks', []))
+            embed.add_field(
+                name=p['name'],
+                value=f"{p.get('description', 'No description')}\nTasks: {task_count}",
+                inline=False
+            )
+        
+        await ctx.send(embed=embed)
+    except Exception as e:
+        logger.error(f"Failed to list local projects: {e}", exc_info=True)
+        await ctx.send(f"❌ Failed to list projects: {str(e)}")
+
+
+@bot.command(name='t_add')
+async def add_local_task(ctx, project_name: str, title: str, due_date: str = None):
+    """Add a task to a local project"""
+    try:
+        project = project_manager.get_project_by_name(project_name)
+        if not project:
+            await ctx.send(f"❌ Project '{project_name}' not found.")
+            return
+
+        task = project_manager.add_task(project['id'], title, str(ctx.author.id), due_date)
+        if task:
+            await ctx.send(f"✅ Task **{task['title']}** added to **{project['name']}**!")
+        else:
+            await ctx.send("❌ Failed to add task.")
+            
+    except Exception as e:
+        logger.error(f"Failed to add local task: {e}", exc_info=True)
+        await ctx.send(f"❌ Failed to add task: {str(e)}")
+
+
+@bot.command(name='t_list')
+async def list_local_tasks(ctx, project_name: str):
+    """List tasks for a local project"""
+    try:
+        project = project_manager.get_project_by_name(project_name)
+        if not project:
+            await ctx.send(f"❌ Project '{project_name}' not found.")
+            return
+
+        tasks = project_manager.get_tasks(project['id'])
+        if not tasks:
+            await ctx.send(f"📝 No tasks found for **{project['name']}**.")
+            return
+
+        embed = discord.Embed(
+            title=f"📋 Tasks for {project['name']}",
+            color=0x0099FF
+        )
+
+        status_emoji = {
+            'todo': '⬜',
+            'in_progress': '🔄',
+            'done': '✅'
+        }
+
+        for task in tasks:
+            status = task.get('status', 'todo')
+            emoji = status_emoji.get(status, '❓')
+            assignee = f"<@{task['assignee_id']}>" if task.get('assignee_id') else "Unassigned"
+            
+            embed.add_field(
+                name=f"{emoji} {task['title']}",
+                value=f"ID: `{task['id']}`\nStatus: {status}\nAssignee: {assignee}",
+                inline=False
+            )
+
+        await ctx.send(embed=embed)
+
+    except Exception as e:
+        logger.error(f"Failed to list local tasks: {e}", exc_info=True)
+        await ctx.send(f"❌ Failed to list tasks: {str(e)}")
+
+
+@bot.command(name='t_status')
+async def update_task_status(ctx, task_id: str, status: str):
+    """Update task status (todo, in_progress, done)"""
+    try:
+        if project_manager.update_task_status(task_id, status):
+            await ctx.send(f"✅ Task `{task_id}` status updated to **{status}**!")
+        else:
+            await ctx.send(f"❌ Failed to update task. Check ID and status (todo, in_progress, done).")
+    except Exception as e:
+        logger.error(f"Failed to update task status: {e}", exc_info=True)
+        await ctx.send(f"❌ Failed to update task: {str(e)}")
+
+
+@bot.command(name='t_assign')
+async def assign_local_task(ctx, task_id: str, user: discord.User):
+    """Assign a task to a user"""
+    try:
+        if project_manager.assign_task(task_id, str(user.id)):
+            await ctx.send(f"✅ Task `{task_id}` assigned to {user.mention}!")
+        else:
+            await ctx.send(f"❌ Failed to assign task. Check ID.")
+    except Exception as e:
+        logger.error(f"Failed to assign task: {e}", exc_info=True)
+        await ctx.send(f"❌ Failed to assign task: {str(e)}")
+
+
+@bot.command(name='set_channel')
+async def set_report_channel(ctx, channel_id: str):
+    """Set the channel for reports (Admin only)"""
+    # Check if user is admin
+    if ADMIN_USER_IDS and ctx.author.id not in ADMIN_USER_IDS:
+        await ctx.send("❌ You don't have permission to run this command.")
+        return
+
+    try:
+        # Validate channel ID
+        try:
+            c_id = int(channel_id)
+            channel = bot.get_channel(c_id)
+            if not channel:
+                await ctx.send(f"❌ Bot cannot find channel with ID {channel_id}. Make sure I'm in that server!")
+                return
+        except ValueError:
+            await ctx.send("❌ Invalid channel ID. Please provide a number.")
+            return
+
+        project_manager.set_config('report_channel_id', str(c_id))
+        await ctx.send(f"✅ Report channel set to {channel.mention} (ID: {c_id})")
+        logger.info(f"Report channel set to {c_id} by {ctx.author}")
+        
+    except Exception as e:
+        logger.error(f"Failed to set channel: {e}", exc_info=True)
+        await ctx.send(f"❌ Failed to set channel: {str(e)}")
+
         embed.add_field(
             name="🔔 Report Schedule",
             value=f"Reports will be sent at **8 AM** and **8 PM IST** daily.",
