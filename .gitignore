@@ -41,3 +41,8 @@ Thumbs.db
 
 # Git
 .git/
+
+# Automation (keep local only)
+automation_data/
+scripts/daily_commit_bot.py
+scripts/setup_auto_commit.sh
