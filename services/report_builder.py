@@ -195,18 +195,18 @@ class ReportBuilder:
         )
         
         commands = [
-            ("📊 **Project Commands**", ""),
-            ("!status [project_name]", "Show current status of a project or list all projects"),
-            ("!mytasks", "Show tasks assigned to you (requires account linking)"),
+            ("📊 **Local Project Management**", ""),
+            ("!p_create <name> [desc]", "Create a new local project"),
+            ("!p_list", "List all local projects"),
+            ("!t_add <project> <title> [date]", "Add a task to a project"),
+            ("!t_list <project>", "List tasks for a project"),
+            ("!t_status <id> <status>", "Update task status (todo/in_progress/done)"),
+            ("!t_assign <id> <@user>", "Assign a task to a user"),
             ("", ""),
-            ("📢 **Report Management**", ""),
-            ("!enable <project_name>", "Enable scheduled reports for a specific project"),
-            ("!disable <project_name>", "Disable scheduled reports for a specific project"),
-            ("!enabled", "List all projects with scheduled reports enabled"),
-            ("!report", "Trigger a manual report (Admin only)"),
+            ("⚙️ **Configuration**", ""),
+            ("!set_channel <channel_id>", "Set the channel for reports (Admin only)"),
             ("", ""),
-            ("🔗 **Account & Info**", ""),
-            ("!link <email>", "Link your Discord account to web app account"),
+            ("ℹ️ **Info**", ""),
             ("!ping", "Check bot latency and status"),
             ("!help", "Show this help message"),
         ]
@@ -217,6 +217,6 @@ class ReportBuilder:
             elif cmd:  # Header only
                 embed.add_field(name=cmd, value="​", inline=False)
         
-        embed.set_footer(text="🔔 Scheduled reports: 8 AM & 8 PM IST daily • Use !enable to activate")
+        embed.set_footer(text="🔔 Use !set_channel to configure where reports are sent")
         
         return embed

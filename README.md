@@ -151,25 +151,26 @@ python bot.py
 
 ## 📋 Commands
 
-### Project Management Commands
+### Local Project Management Commands
 | Command | Description | Example |
 |---------|-------------|---------|
-| `!help` | Show all available commands | `!help` |
-| `!status [project]` | Show project status or list all projects | `!status Mobile App` |
-| `!mytasks` | Show your assigned tasks (grouped by priority) | `!mytasks` |
-| `!report` | Trigger manual report (Admin only) | `!report` |
-| `!enable <project>` | Enable scheduled reports for a project | `!enable Mobile App` |
-| `!disable <project>` | Disable scheduled reports for a project | `!disable Mobile App` |
-| `!enabled` | List projects with reports enabled | `!enabled` |
-| `!link <email>` | Link Discord account to web app | `!link user@example.com` |
-| `!ping` | Check bot latency and status | `!ping` |
+| `!p_create <name> [desc]` | Create a new local project | `!p_create "Mobile App" "iOS/Android App"` |
+| `!p_list` | List all local projects | `!p_list` |
+| `!t_add <project> <title> [date]` | Add a task to a project | `!t_add "Mobile App" "Fix login bug" 2023-12-31` |
+| `!t_list <project>` | List tasks for a project | `!t_list "Mobile App"` |
+| `!t_status <id> <status>` | Update task status (todo/in_progress/done) | `!t_status 1 in_progress` |
+| `!t_assign <id> <@user>` | Assign a task to a user | `!t_assign 1 @User` |
 
-### AI Code Review Commands
+### Configuration Commands
 | Command | Description | Example |
 |---------|-------------|---------|
-| `!map-user <github> @user` | Map GitHub username to Discord user | `!map-user john_dev @John#1234` |
-| `!unmap-user <github>` | Remove GitHub to Discord mapping | `!unmap-user john_dev` |
-| `!list-mappings` | Show all user mappings | `!list-mappings` |
+| `!set_channel <channel_id>` | Set report channel (Admin only) | `!set_channel 123456789` |
+
+### Info Commands
+| Command | Description | Example |
+|---------|-------------|---------|
+| `!ping` | Check bot latency and status | `!ping` |
+| `!help` | Show all available commands | `!help` |
 
 ### Conversational AI (in DMs)
 | Command | Description | Example |
@@ -178,6 +179,24 @@ python bot.py
 | `!reset` | Clear conversation history | `!reset` |
 | `!context` | Show what the bot remembers | `!context` |
 | `!help-chat` | Show example questions | `!help-chat` |
+
+### AI Code Review Commands
+| Command | Description | Example |
+|---------|-------------|---------|
+| `!map-user <github> @user` | Map GitHub username to Discord user | `!map-user john_dev @John#1234` |
+| `!unmap-user <github>` | Remove GitHub to Discord mapping | `!unmap-user john_dev` |
+| `!list-mappings` | Show all user mappings | `!list-mappings` |
+
+### Deprecated Commands (Web App Integration)
+| Command | Description | Example |
+|---------|-------------|---------|
+| `!status [project]` | Show project status or list all projects | `!status Mobile App` |
+| `!mytasks` | Show your assigned tasks (grouped by priority) | `!mytasks` |
+| `!report` | Trigger manual report (Admin only) | `!report` |
+| `!enable <project>` | Enable scheduled reports for a project | `!enable Mobile App` |
+| `!disable <project>` | Disable scheduled reports for a project | `!disable Mobile App` |
+| `!enabled` | List projects with reports enabled | `!enabled` |
+| `!link <email>` | Link Discord account to web app | `!link user@example.com` |
 
 ## 📁 Project Structure
 
