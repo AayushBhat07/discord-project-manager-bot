@@ -1,0 +1,32 @@
+"""
+Add health score calculator service
+"""
+
+import logging
+from typing import Dict, List
+
+logger = logging.getLogger(__name__)
+
+class HealthScoreService:
+    """Calculate project health scores"""
+    
+    def __init__(self):
+        self.score_cache = {}
+    
+    def calculate_health_score(self, project_id: str, metrics: Dict) -> int:
+        """Calculate overall health score (0-100)"""
+        score = 100
+        
+        # Apply various metrics
+        completion_score = self._calculate_completion_rate(metrics)
+        overdue_penalty = self._calculate_overdue_penalty(metrics)
+        activity_score = self._calculate_activity_score(metrics)
+        
+        final_score = max(0, min(100, int(
+            completion_score * 0.4 + 
+            (100 - overdue_penalty) * 0.3 + 
+            activity_score * 0.3
+        )))
+        
+        logger.info(f"Project {project_id} health score: {final_score}")
+        return final_score
