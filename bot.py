@@ -1376,3 +1376,14 @@ logger = logging.getLogger(__name__)
 
 # Integration code for Time Tracking
 logger.info("Feature integration: 3.3")
+
+
+# Add active timers display
+
+# Add active timers display
+
+import logging
+logger = logging.getLogger(__name__)
+
+# Integration code for Time Tracking
+logger.info("Feature integration: 5.1")
