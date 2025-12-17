@@ -1,0 +1,12 @@
+"""
+Add health report builder
+"""
+
+
+# Add health report builder
+
+import logging
+logger = logging.getLogger(__name__)
+
+# Integration code for Health Score
+logger.info("Feature integration: 8.1")
