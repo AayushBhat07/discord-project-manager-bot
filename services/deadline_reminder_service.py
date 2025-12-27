@@ -58,3 +58,14 @@ logger = logging.getLogger(__name__)
 
 # Integration code for Reminders
 logger.info("Feature integration: 11.3")
+
+
+# Add tasks due today detection
+
+# Add tasks due today detection
+
+import logging
+logger = logging.getLogger(__name__)
+
+# Integration code for Reminders
+logger.info("Feature integration: 12.1")
