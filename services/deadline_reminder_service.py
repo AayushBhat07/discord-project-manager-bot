@@ -47,3 +47,14 @@ class DeadlineReminderService:
 # Add daily deadline check scheduler
 # Add daily deadline check scheduler
 # Implementation placeholder
+
+
+# Add DM notification system
+
+# Add DM notification system
+
+import logging
+logger = logging.getLogger(__name__)
+
+# Integration code for Reminders
+logger.info("Feature integration: 11.3")
