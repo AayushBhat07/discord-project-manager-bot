@@ -1414,3 +1414,14 @@ logger = logging.getLogger(__name__)
 
 # Integration code for Health Score
 logger.info("Feature integration: 9.3")
+
+
+# Add !remind-me command
+
+# Add !remind-me command
+
+import logging
+logger = logging.getLogger(__name__)
+
+# Integration code for Reminders
+logger.info("Feature integration: 13.2")
