@@ -14,3 +14,8 @@ Add user reminder preferences
     def get_user_preference(self, user_id: str, preference: str, default=None):
         """Get user reminder preference"""
         return self.user_preferences.get(user_id, {}).get(preference, default)
+
+
+# Add custom reminder times
+# Add custom reminder times
+# Implementation placeholder
