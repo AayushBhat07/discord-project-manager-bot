@@ -2,6 +2,16 @@
 Add user reminder preferences
 """
 
+import logging
+
+logger = logging.getLogger(__name__)
+
+
+class ReminderPreferencesService:
+    """Service for managing user reminder preferences"""
+    
+    def __init__(self):
+        self.user_preferences = {}
     
     def set_user_preference(self, user_id: str, preference: str, value: any):
         """Set user reminder preference"""
@@ -14,8 +24,3 @@ Add user reminder preferences
     def get_user_preference(self, user_id: str, preference: str, default=None):
         """Get user reminder preference"""
         return self.user_preferences.get(user_id, {}).get(preference, default)
-
-
-# Add custom reminder times
-# Add custom reminder times
-# Implementation placeholder

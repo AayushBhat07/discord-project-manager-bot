@@ -49,7 +49,7 @@ class ConversationManager:
         """Load conversation history from file"""
         try:
             if os.path.exists(self.history_file):
-                with open(self.history_file, 'r') as f:
+                with open(self.history_file, 'r', encoding='utf-8') as f:
                     data = json.load(f)
                     
                     # Convert to proper format
@@ -83,7 +83,7 @@ class ConversationManager:
             # Ensure directory exists
             os.makedirs(os.path.dirname(self.history_file), exist_ok=True)
             
-            with open(self.history_file, 'w') as f:
+            with open(self.history_file, 'w', encoding='utf-8') as f:
                 json.dump(data, f, indent=2)
             
             logger.debug(f"Saved {len(self.conversations)} conversation histories")
