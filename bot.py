@@ -206,8 +206,8 @@ async def on_message(message):
     """🤖 Handle all messages - route DMs to conversational AI"""
     
     # Ignore bot's own messages
-    if message.author == bot.user:
-        return
+    # if message.author == bot.user:
+        # return  # Shawn: temp disabled to allow bot-to-bot testing
     
     # Route DMs to conversational AI (if not a command)
     if isinstance(message.channel, discord.DMChannel) and ENABLE_CONVERSATIONAL_AI:
