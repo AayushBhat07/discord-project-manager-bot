@@ -7,6 +7,7 @@ import ssl
 import random
 import json
 import os
+import uuid
 from typing import Optional, List, Dict, Any
 from datetime import datetime
 from aiohttp import web
@@ -30,7 +31,6 @@ from services.local_llm_service import LocalLLMService
 from services.code_review_builder import CodeReviewBuilder
 from services.conversational_ai_service import ConversationalAIService
 from services.conversation_manager import ConversationManager
-from services.webapp_query_service import WebAppQueryService
 from services.webapp_query_service import WebAppQueryService
 from services.project_manager_service import ProjectManagerService
 from utils.scheduler import ReportScheduler
@@ -131,7 +131,7 @@ def save_enabled_projects(project_ids: List[str]) -> None:
 STATUS_MESSAGES = [
     (discord.ActivityType.watching, "👀 your team crush deadlines"),
     (discord.ActivityType.watching, "📊 projects like a hawk"),
-    (discord.ActivityType.playing, "🎮 Project Manager 2024"),
+    (discord.ActivityType.playing, f"🎮 Project Manager {datetime.now().year}"),
     (discord.ActivityType.listening, "🎧 your feature requests"),
     (discord.ActivityType.competing, "🏆 for best bot award"),
     (discord.ActivityType.watching, "⚡ commits fly by"),
@@ -672,7 +672,7 @@ async def my_tasks(ctx):
                     timestamp = task['dueDate'] / 1000  # Convert ms to seconds
                     due_date = dt.fromtimestamp(timestamp)
                     due_date_str = due_date.strftime('%b %d, %Y')
-                except:
+                except Exception:
                     due_date_str = "Invalid date"
             
             # Format labels
@@ -922,6 +922,13 @@ async def list_local_tasks(ctx, project_name: str):
 @bot.command(name='t_status')
 async def update_task_status(ctx, task_id: str, status: str):
     """Update task status (todo, in_progress, done)"""
+    # Validate UUID format
+    try:
+        uuid.UUID(task_id)
+    except ValueError:
+        await ctx.send(f"❌ Invalid task ID format. Please provide a valid UUID.")
+        return
+    
     try:
         if project_manager.update_task_status(task_id, status):
             await ctx.send(f"✅ Task `{task_id}` status updated to **{status}**!")
@@ -1354,107 +1361,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
-# Add manual time logging command
-
-# Add manual time logging command
-
-import logging
-logger = logging.getLogger(__name__)
-
-# Integration code for Time Tracking
-logger.info("Feature integration: 2.3")
-
-
-# Add weekly time report command
-
-# Add weekly time report command
-
-import logging
-logger = logging.getLogger(__name__)
-
-# Integration code for Time Tracking
-logger.info("Feature integration: 3.3")
-
-
-# Add active timers display
-
-# Add active timers display
-
-import logging
-logger = logging.getLogger(__name__)
-
-# Integration code for Time Tracking
-logger.info("Feature integration: 5.1")
-
-
-# Add weekly health report scheduling
-
-# Add weekly health report scheduling
-
-import logging
-logger = logging.getLogger(__name__)
-
-# Integration code for Health Score
-logger.info("Feature integration: 8.2")
-
-
-# Add health score command
-# Add health score command
-# Implementation placeholder
-
-
-# Add DM health alerts
-
-# Add DM health alerts
-
-import logging
-logger = logging.getLogger(__name__)
-
-# Integration code for Health Score
-logger.info("Feature integration: 9.3")
-
-
-# Add !remind-me command
-
-# Add !remind-me command
-
-import logging
-logger = logging.getLogger(__name__)
-
-# Integration code for Reminders
-logger.info("Feature integration: 13.2")
-
-
-# Add snooze functionality
-
-# Add snooze functionality
-
-import logging
-logger = logging.getLogger(__name__)
-
-# Integration code for Reminders
-logger.info("Feature integration: 14.1")
-
-
-# Integrate all features with main bot
-
-# Integrate all features with main bot
-
-import logging
-logger = logging.getLogger(__name__)
-
-# Integration code for Integration
-logger.info("Feature integration: 15.1")
-
-
-# Update documentation and help commands
-
-# Update documentation and help commands
-
-import logging
-logger = logging.getLogger(__name__)
-
-# Integration code for Integration
-logger.info("Feature integration: 15.3")

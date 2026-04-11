@@ -14,6 +14,8 @@ class ProjectManagerService:
         self.data_file = data_file
         self.projects = []
         self.config = {}
+        # Ensure data directory exists during initialization
+        os.makedirs(os.path.dirname(self.data_file), exist_ok=True)
         self._load_data()
 
     def _load_data(self):
