@@ -2,6 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const moment = require('moment');
 const cryptoManager = require('./cryptoManager');
+const { validateOwnership } = require('./ownershipValidator');
 
 const ENCRYPTION_KEY = process.env.PAT_ENCRYPTION_KEY;
 
@@ -65,9 +66,12 @@ class UserConfigManager {
     return this.userConfigs[userId] || null;
   }
 
-  updateUserConfig(userId, updates) {
+  updateUserConfig(callerId, userId, updates) {
+    if (!validateOwnership(callerId, userId)) {
+      return { success: false, error: 'Ownership validation failed: you can only modify your own config' };
+    }
     if (!this.userConfigs[userId]) {
-      return null;
+      return { success: false, error: 'User config not found' };
     }
 
     this.userConfigs[userId] = {
@@ -76,7 +80,7 @@ class UserConfigManager {
       updatedAt: new Date().toISOString()
     };
     this.save();
-    return this.userConfigs[userId];
+    return { success: true, config: this.userConfigs[userId] };
   }
 
   updateLastActivity(userId) {
@@ -109,7 +113,10 @@ class UserConfigManager {
     return cleaned;
   }
 
-  setGitHubPAT(userId, pat) {
+  setGitHubPAT(callerId, userId, pat) {
+    if (!validateOwnership(callerId, userId)) {
+      return { success: false, error: 'Ownership validation failed: you can only modify your own config' };
+    }
     if (!this.userConfigs[userId]) {
       return { success: false, error: 'User config not found' };
     }
@@ -143,7 +150,10 @@ class UserConfigManager {
     }
   }
 
-  setRepoConfig(userId, repoPath, branch = 'main', remote = 'origin') {
+  setRepoConfig(callerId, userId, repoPath, branch = 'main', remote = 'origin') {
+    if (!validateOwnership(callerId, userId)) {
+      return { success: false, error: 'Ownership validation failed: you can only modify your own config' };
+    }
     if (!this.userConfigs[userId]) {
       return { success: false, error: 'User config not found' };
     }
