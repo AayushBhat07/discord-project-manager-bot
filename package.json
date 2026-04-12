@@ -1,0 +1,41 @@
+{
+  "name": "discord-project-manager-bot",
+  "version": "2.0.0",
+  "description": "Discord bot for project management with scheduled commit automation",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node src/index.js",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "lint": "eslint src/",
+    "deploy-commands": "node src/deploy-commands.js"
+  },
+  "keywords": [
+    "discord",
+    "bot",
+    "github",
+    "automation",
+    "commit",
+    "scheduler"
+  ],
+  "author": "AayushBhat07",
+  "license": "MIT",
+  "dependencies": {
+    "discord.js": "^14.14.1",
+    "dotenv": "^16.4.1",
+    "moment": "^2.30.1",
+    "simple-git": "^3.22.0",
+    "node-cron": "^3.0.3",
+    "jsonfile": "^6.1.0",
+    "uuid": "^9.0.1",
+    "node-fetch": "^2.7.0"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "eslint": "^8.57.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
