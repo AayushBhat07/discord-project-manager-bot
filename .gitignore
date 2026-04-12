@@ -1,48 +1,9 @@
-# Environment variables
+node_modules/
 .env
-.env.*
-!.env.example
-
-# Sensitive data files
-user_mappings.json
-enabled_projects.json
-startup.log
-bot_output.log
-bot_error.log
-
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-venv/
-env/
-ENV/
-.venv
-
-# Logs
 *.log
-logs/
-
-# Conversation history (contains private chat data)
-data/
-data/conversation_history.json
-
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
-
-# OS
 .DS_Store
-Thumbs.db
-
-# Git
-.git/
-
-# Automation (keep local only)
-automation_data/
-scripts/daily_commit_bot.py
-scripts/setup_auto_commit.sh
+src/store/
+coverage/
+dist/
+TEMP_REPO/
+sessions.json

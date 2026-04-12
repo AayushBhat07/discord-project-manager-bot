@@ -1,9 +1,0 @@
-node_modules/
-.env
-*.log
-.DS_Store
-src/store/
-coverage/
-dist/
-TEMP_REPO/
-sessions.json

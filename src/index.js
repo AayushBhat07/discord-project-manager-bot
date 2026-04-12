@@ -10,7 +10,6 @@ const cliHandler = require('./modules/cliHandler');
 const tempRepoManager = require('./modules/tempRepoManager');
 const aiHandler = require('./modules/aiHandler');
 const userConfigManager = require('./modules/userConfigManager');
-const credentialManager = require('./modules/credentialManager');
 
 const client = new Client({
   intents: [
