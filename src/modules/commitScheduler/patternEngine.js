@@ -5,9 +5,9 @@ const timestampProcessor = require('./timestampProcessor');
 class PatternEngine {
   constructor() {
     this.templates = {
-      A: this.getTemplateA(),
-      B: this.getTemplateB(),
-      C: this.getTemplateC(),
+      a: this.getTemplateA(),
+      b: this.getTemplateB(),
+      c: this.getTemplateC(),
       heart: this.getHeartTemplate(),
       star: this.getStarTemplate(),
       check: this.getCheckTemplate(),
@@ -158,10 +158,10 @@ class PatternEngine {
     for (let y = 0; y < template.height; y++) {
       for (let x = 0; x < template.width; x++) {
         if (template.grid[y][x] === 1) {
-          const date = startOfWeek.clone().add(startDay + x, 'weeks').add(y, 'days');
+          const date = startOfWeek.clone().add(startDay + x, 'weeks').add(startDay + y, 'days');
           coordinates.push({
             week: startWeek + x,
-            day: y,
+            day: startDay + y,
             date: date.format('YYYY-MM-DD'),
             intensity: options.intensity || 1
           });
