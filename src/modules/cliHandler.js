@@ -480,7 +480,7 @@ class CLIHandler {
       return bannerUI.createErrorEmbed('Setup Failed', result.error);
     }
 
-    credentialManager.setCredential(userId, 'github_pat', pat);
+    userConfigManager.setGitHubPAT(userId, pat);
 
     return bannerUI.createSuccessEmbed('✅ GitHub Setup Complete!', 
       `Your GitHub credentials have been saved securely.`, [
