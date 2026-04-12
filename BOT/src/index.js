@@ -104,6 +104,11 @@ client.once('ready', async () => {
   setInterval(() => {
     sessionManager.cleanExpiredSessions();
   }, 24 * 60 * 60 * 1000);
+  
+  setInterval(() => {
+    sessionManager.cleanupInactiveSessions();
+    userConfigManager.cleanupInactiveUsers();
+  }, 60 * 60 * 1000); // Every hour
 });
 
 client.on('interactionCreate', async (interaction) => {

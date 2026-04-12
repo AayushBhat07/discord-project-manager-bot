@@ -190,6 +190,26 @@ class SessionManager {
     return cleaned;
   }
 
+  cleanupInactiveSessions(inactivityDays = 7) {
+    const cutoff = moment().subtract(inactivityDays, 'days');
+    let cleaned = 0;
+
+    for (const [id, session] of this.sessions) {
+      const sessionTime = moment(session.lastActive);
+      if (sessionTime.isBefore(cutoff)) {
+        this.sessions.delete(id);
+        cleaned++;
+      }
+    }
+
+    if (cleaned > 0) {
+      this.saveSessions();
+      console.log(`Cleaned up ${cleaned} inactive sessions`);
+    }
+
+    return cleaned;
+  }
+
   deleteSession(sessionId) {
     const session = this.sessions.get(sessionId);
     if (!session) return { success: false, error: 'Session not found' };

@@ -1,10 +1,12 @@
 const fs = require('fs');
 const path = require('path');
+const moment = require('moment');
 
 class UserConfigManager {
   constructor() {
     this.storePath = path.join(__dirname, '..', 'store', 'userConfigs.json');
     this.userConfigs = {};
+    this.inactivityDays = 7;
     this.load();
   }
 
@@ -36,6 +38,7 @@ class UserConfigManager {
       username: username,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
+      lastActivity: new Date().toISOString(),
       github: {
         pat: null,
         repoPath: null,
@@ -71,6 +74,36 @@ class UserConfigManager {
     };
     this.save();
     return this.userConfigs[userId];
+  }
+
+  updateLastActivity(userId) {
+    if (this.userConfigs[userId]) {
+      this.userConfigs[userId].lastActivity = new Date().toISOString();
+      this.save();
+    }
+  }
+
+  cleanupInactiveUsers(inactivityDays = null) {
+    const days = inactivityDays || this.inactivityDays;
+    const cutoff = moment().subtract(days, 'days');
+    let cleaned = 0;
+
+    for (const [userId, config] of Object.entries(this.userConfigs)) {
+      if (config.lastActivity) {
+        const lastActive = moment(config.lastActivity);
+        if (lastActive.isBefore(cutoff)) {
+          delete this.userConfigs[userId];
+          cleaned++;
+        }
+      }
+    }
+
+    if (cleaned > 0) {
+      this.save();
+      console.log(`Cleaned up ${cleaned} inactive users`);
+    }
+
+    return cleaned;
   }
 
   setGitHubPAT(userId, pat) {
