@@ -13,21 +13,15 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     
-    - name: Set up Python
-      uses: actions/setup-python@v5
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
       with:
-        python-version: '3.11'
+        node-version: '20'
     
     - name: Install dependencies
       run: |
-        pip install -r requirements.txt
-        pip install pytest
+        npm install
     
     - name: Run tests
       run: |
-        python -m pytest test_features.py -v
-    
-    - name: Check syntax
-      run: |
-        python -m py_compile bot.py
-        python -m py_compile services/*.py
+        npm test
