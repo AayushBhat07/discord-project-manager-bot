@@ -1,6 +1,9 @@
 const fs = require('fs');
 const path = require('path');
 const moment = require('moment');
+const cryptoManager = require('./cryptoManager');
+
+const ENCRYPTION_KEY = process.env.PAT_ENCRYPTION_KEY;
 
 class UserConfigManager {
   constructor() {
@@ -66,7 +69,7 @@ class UserConfigManager {
     if (!this.userConfigs[userId]) {
       return null;
     }
-    
+
     this.userConfigs[userId] = {
       ...this.userConfigs[userId],
       ...updates,
@@ -110,14 +113,34 @@ class UserConfigManager {
     if (!this.userConfigs[userId]) {
       return { success: false, error: 'User config not found' };
     }
-    this.userConfigs[userId].github.pat = pat;
+
+    if (ENCRYPTION_KEY) {
+      const encrypted = cryptoManager.encrypt(pat, ENCRYPTION_KEY);
+      if (encrypted) {
+        this.userConfigs[userId].github.pat = encrypted;
+      } else {
+        console.warn('PAT encryption failed, storing plaintext');
+        this.userConfigs[userId].github.pat = pat;
+      }
+    } else {
+      console.warn('PAT_ENCRYPTION_KEY not set, storing PAT in plaintext (dev mode only)');
+      this.userConfigs[userId].github.pat = pat;
+    }
+
     this.userConfigs[userId].updatedAt = new Date().toISOString();
     this.save();
     return { success: true };
   }
 
   getGitHubPAT(userId) {
-    return this.userConfigs[userId]?.github?.pat || null;
+    const stored = this.userConfigs[userId]?.github?.pat;
+    if (!stored) return null;
+
+    if (ENCRYPTION_KEY) {
+      return cryptoManager.decrypt(stored, ENCRYPTION_KEY);
+    } else {
+      return stored;
+    }
   }
 
   setRepoConfig(userId, repoPath, branch = 'main', remote = 'origin') {
