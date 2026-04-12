@@ -3,6 +3,7 @@ const sessionManager = require('./sessionManager');
 const bannerUI = require('./bannerUI');
 const aiHandler = require('./aiHandler');
 const userConfigManager = require('./userConfigManager');
+const authorizationManager = require('./authorizationManager');
 
 class CLIHandler {
   constructor() {
@@ -49,6 +50,10 @@ class CLIHandler {
 
     const cmd = this.commands.get(parsed.command);
     if (!cmd) return null;
+
+    if (!authorizationManager.isAuthorized(message.author.id)) {
+      return bannerUI.createErrorEmbed('Unauthorized', 'You are not authorized to use this bot.');
+    }
 
     try {
       return await cmd.handler(message, parsed.args, parsed);
