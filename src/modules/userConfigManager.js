@@ -1,6 +1,10 @@
 const fs = require('fs');
 const path = require('path');
 const moment = require('moment');
+const cryptoManager = require('./cryptoManager');
+const { validateOwnership } = require('./ownershipValidator');
+
+const ENCRYPTION_KEY = process.env.PAT_ENCRYPTION_KEY;
 
 class UserConfigManager {
   constructor() {
@@ -62,18 +66,21 @@ class UserConfigManager {
     return this.userConfigs[userId] || null;
   }
 
-  updateUserConfig(userId, updates) {
-    if (!this.userConfigs[userId]) {
-      return null;
+  updateUserConfig(callerId, userId, updates) {
+    if (!validateOwnership(callerId, userId)) {
+      return { success: false, error: 'Ownership validation failed: you can only modify your own config' };
     }
-    
+    if (!this.userConfigs[userId]) {
+      return { success: false, error: 'User config not found' };
+    }
+
     this.userConfigs[userId] = {
       ...this.userConfigs[userId],
       ...updates,
       updatedAt: new Date().toISOString()
     };
     this.save();
-    return this.userConfigs[userId];
+    return { success: true, config: this.userConfigs[userId] };
   }
 
   updateLastActivity(userId) {
@@ -106,21 +113,47 @@ class UserConfigManager {
     return cleaned;
   }
 
-  setGitHubPAT(userId, pat) {
+  setGitHubPAT(callerId, userId, pat) {
+    if (!validateOwnership(callerId, userId)) {
+      return { success: false, error: 'Ownership validation failed: you can only modify your own config' };
+    }
     if (!this.userConfigs[userId]) {
       return { success: false, error: 'User config not found' };
     }
-    this.userConfigs[userId].github.pat = pat;
+
+    if (ENCRYPTION_KEY) {
+      const encrypted = cryptoManager.encrypt(pat, ENCRYPTION_KEY);
+      if (encrypted) {
+        this.userConfigs[userId].github.pat = encrypted;
+      } else {
+        console.warn('PAT encryption failed, storing plaintext');
+        this.userConfigs[userId].github.pat = pat;
+      }
+    } else {
+      console.warn('PAT_ENCRYPTION_KEY not set, storing PAT in plaintext (dev mode only)');
+      this.userConfigs[userId].github.pat = pat;
+    }
+
     this.userConfigs[userId].updatedAt = new Date().toISOString();
     this.save();
     return { success: true };
   }
 
   getGitHubPAT(userId) {
-    return this.userConfigs[userId]?.github?.pat || null;
+    const stored = this.userConfigs[userId]?.github?.pat;
+    if (!stored) return null;
+
+    if (ENCRYPTION_KEY) {
+      return cryptoManager.decrypt(stored, ENCRYPTION_KEY);
+    } else {
+      return stored;
+    }
   }
 
-  setRepoConfig(userId, repoPath, branch = 'main', remote = 'origin') {
+  setRepoConfig(callerId, userId, repoPath, branch = 'main', remote = 'origin') {
+    if (!validateOwnership(callerId, userId)) {
+      return { success: false, error: 'Ownership validation failed: you can only modify your own config' };
+    }
     if (!this.userConfigs[userId]) {
       return { success: false, error: 'User config not found' };
     }

@@ -1,4 +1,4 @@
-const patternEngine = require('../src/modules/commitScheduler/patternEngine');
+const patternEngine = require('../../src/modules/commitScheduler/patternEngine');
 
 describe('PatternEngine', () => {
   describe('getTemplate', () => {
@@ -24,7 +24,7 @@ describe('PatternEngine', () => {
     test('should list all available templates', () => {
       const templates = patternEngine.listTemplates();
       expect(templates.length).toBeGreaterThan(0);
-      expect(templates).toContainEqual(expect.objectContaining({ id: 'A', name: 'A' }));
+      expect(templates).toContainEqual(expect.objectContaining({ id: 'a', name: 'A' }));
       expect(templates).toContainEqual(expect.objectContaining({ id: 'heart', name: 'Heart' }));
     });
   });

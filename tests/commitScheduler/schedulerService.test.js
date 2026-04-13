@@ -1,4 +1,4 @@
-const schedulerService = require('../src/modules/commitScheduler/schedulerService');
+const schedulerService = require('../../src/modules/commitScheduler/schedulerService');
 const path = require('path');
 const fs = require('fs');
 

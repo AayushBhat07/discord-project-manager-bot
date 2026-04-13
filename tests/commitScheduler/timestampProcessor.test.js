@@ -1,5 +1,5 @@
 const moment = require('moment');
-const timestampProcessor = require('../src/modules/commitScheduler/timestampProcessor');
+const timestampProcessor = require('../../src/modules/commitScheduler/timestampProcessor');
 
 describe('TimestampProcessor', () => {
   describe('parse', () => {
